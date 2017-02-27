@@ -1,7 +1,7 @@
 # epsig2_gui.py 
-# Ported from Rob Larkin's LUA script version to python. 
+# Ported from R## L######'ss LUA script version to python. 
 # 
-##	from Rob's original epsig2.lua 
+##	from R##'s original epsig2.lua 
 ##  Usage:
 ##		lua epsig2.lua bnkfilename [seed [reverse] ]
 ##
@@ -30,14 +30,14 @@
 #                 "filename": "C:\blah\blah\cache.json"
 #               }
 #            } - for readability.
-#       - fixed cache file location to "\\\Justice.qld.gov.au\\Data\\OLGR-TECHSERV\\TSS Applications Source\\James\\epsig2_cachefile.json"
+#       - fixed cache file location to "\\\Justice.qld.gov.au\\Data\\OLGR-TECHSERV\\TSS Applications Source\\J#####\\epsig2_cachefile.json"
 #           - supports multiple seeds for each file
 #       - adds user specifiable Cache File (when you want to control your own cache)
 #       - adds automatic validation of Cache File, the file is signed and
 #         verified prior to loading automatically, via SHA1 hash and a .sigs file
-# v1.4.2 - add option to write to formatted log file (request by Yick)
+# v1.4.2 - add option to write to formatted log file (request by Y###)
 #        - add option to display flipped bits for Seed in Console Log as an option.
-#          (request by Dung)
+#          (request by D###)
 
 import os
 import sys
