@@ -36,9 +36,9 @@
 #       - adds user specifiable Cache File (when you want to control your own cache)
 #       - adds automatic validation of Cache File, the file is signed and
 #         verified prior to loading automatically, via SHA1 hash and a .sigs file
-# v1.4.2 - add option to write to formatted log file (request by Y###)
+# v1.4.2 - add option to write to formatted log file (request by Y### L##)
 #        - add option to display flipped bits for Seed in Console Log as an option.
-#          (request by D###)
+#          (request by D### N#####)
 #        - Update json signature file verifications to use SHA256
 
 import os
@@ -125,7 +125,7 @@ class epsig2():
                 # Check if Seed and Algorithm matches. 
                 if item['seed'] == seed_input and item['alg'] == alg_input: 
                     verified_time = item['verify'] 
-                    return(item['hash']) # return Hash result
+                    return(str(item['hash']) # return Hash result
         else:
             return 0
 
