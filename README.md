@@ -37,10 +37,8 @@ MOBQ8D14.bin PS32 p
 IGT (QCOM OA4) sc0130b1.bnk (2 lines) =  
 oa40227a.bin OA4R p  
 sc0130b1.bin OA4F p  
-=======
-Python script to generate hashes
 
-v1.4.2  
+Latest Changes v1.4.2  
 - add option to write to formatted log file (request by Y### L##)  
 - add option to display flipped bits for Seed in Console Log as an option. (request by D### N#####)  
 - Update json signature file verifications to use SHA256
