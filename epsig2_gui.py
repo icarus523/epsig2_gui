@@ -30,7 +30,8 @@
 #                 "filename": "C:\blah\blah\cache.json"
 #               }
 #            } - for readability.
-#       - fixed cache file location to "\\\Justice.qld.gov.au\\Data\\OLGR-TECHSERV\\TSS Applications Source\\J#####\\epsig2_cachefile.json"
+#       - fixed cache file location to "\\\Justice.qld.gov.au\\Data
+#               \\OLGR-TECHSERV\\TSS Applications Source\\J#####\\epsig2_cachefile.json"
 #           - supports multiple seeds for each file
 #       - adds user specifiable Cache File (when you want to control your own cache)
 #       - adds automatic validation of Cache File, the file is signed and
@@ -38,6 +39,7 @@
 # v1.4.2 - add option to write to formatted log file (request by Y###)
 #        - add option to display flipped bits for Seed in Console Log as an option.
 #          (request by D###)
+#        - Update json signature file verifications to use SHA256
 
 import os
 import sys
@@ -66,7 +68,7 @@ from datetime import datetime
 VERSION = "1.4.2 (Log File Option)"
 
 EPSIG_LOGFILE = "epsig2.log"
-MAXIMUM_BLOCKSIZE_TO_READ = 65536
+MAXIMUM_BLOCKSIZE_TO_READ = 65535
 VERIFY_THRESHOLD = 5 # Number of Hashes Generated before it can be trusted
 DEFAULT_CACHE_FILE = "\\\Justice.qld.gov.au\\Data\\OLGR-TECHSERV\\TSS Applications Source\\James\\epsig2_cachefile_v2.json"
 p_reset = "\x08"*8
@@ -80,10 +82,10 @@ class epsig2():
 
         return "%08X" % buf
 
-    # input: file to be hashed using sha1()
+    # input: file to be hashed using sha256()
     # output: hexdigest of input file    
-    def dohash_sha1(self, fname, chunksize=8192): 
-        m = hashlib.sha1()         
+    def dohash_sha256(self, fname, chunksize=8192): 
+        m = hashlib.sha256()         
 
         # Read in chunksize blocks at a time
         with open(fname, 'rb') as f:
@@ -118,12 +120,11 @@ class epsig2():
     def checkCacheFilename(self, filename, seed_input, alg_input): # alg_input
         # For filename_seed, concatenate to form unique string. 
         if filename in self.cache_dict.keys(): # a hit?
-            #logging.debug("Cache Hit!\t" + os.path.basename(filename) + ":\t" + seed_input)
             data = self.cache_dict.get(filename) # now a list
             for item in data:
-                if item['seed'] == seed_input and item['alg'] == alg_input: # Check if Seed and Algorithm matches. 
+                # Check if Seed and Algorithm matches. 
+                if item['seed'] == seed_input and item['alg'] == alg_input: 
                     verified_time = item['verify'] 
-                    #logging.debug("Cache item is: " + item['hash'])
                     return(item['hash']) # return Hash result
         else:
             return 0
@@ -141,14 +142,20 @@ class epsig2():
                 with open(cache_location,'r') as json_cachefile: 
                     cache_data = json.load(json_cachefile)
             else: 
-                logging.warning("\n**** WARNING **** File Cache integrity issue: Cannot Verify")
-                logging.warning("**** Generating new File Cache\n")
-                cache_data = {} # return null
+                logging.warning("**** WARNING **** File Cache integrity issue: " +
+                        " Cannot Verify signature")
+                logging.info("Generating new File Cache file:" + cache_location)
+                cache_data = {} # return empty cache
         else:
-            logging.info(cache_location + " cannot be found. Generating default file...")
+            logging.info(cache_location + 
+                " cannot be found. Generating default file...")
             with open(cache_location, 'w') as json_cachefile:
                 # write empty json file
-                json.dump({}, json_cachefile, sort_keys=True, indent=4, separators=(',', ': '))
+                json.dump({}, 
+                    json_cachefile, 
+                    sort_keys=True, 
+                    indent=4, 
+                    separators=(',', ': '))
         
         return(cache_data)
 
@@ -159,13 +166,14 @@ class epsig2():
                 hash = cache_sigs_data['cachefile_hash']
                 fname = cache_sigs_data['filename']
                 
-                generated_hash = self.dohash_sha1(fname)
+                generated_hash = self.dohash_sha256(fname)
                 if hash == generated_hash: 
                     return True
                 else: 
                     return False     
         else: 
-            logging.warning("\n**** WARNING **** Generating new Cache Sigs file\n") # advise user
+            # advise user
+            logging.warning("\n**** WARNING **** Generating new Cache Sigs file\n") 
             if self.user_cache_file: # Handle User selectable Cache File
                 cache_location = self.user_cache_file
             else: 
@@ -177,7 +185,7 @@ class epsig2():
         sigsCacheFile = cache_location[:-4] + "sigs" # .json file renaming to .sigs file
         
         with open(sigsCacheFile,'w') as sigs_file: 
-            h = self.dohash_sha1(cache_location) # requires file name as input
+            h = self.dohash_sha256(cache_location) # requires file name as input
             
             timestamp = datetime.now()
             sigs_dict = { 'cachefile_hash' : h,
@@ -213,7 +221,8 @@ class epsig2():
         self.LogOutput = []
         
         if self.useCacheFile.get() == 1: # Use Cache File
-            self.cache_dict = self.importCacheFile() # Overwrite self.cache_dict with contents of file
+            # Overwrite self.cache_dict with contents of file
+            self.cache_dict = self.importCacheFile() 
 
         oh = "0000000000000000000000000000000000000000"
         # Verify Seed is a number String format, and atleast 2 digits long 
@@ -230,7 +239,7 @@ class epsig2():
                 fdname = ['fname', 'type', 'blah']
                 reader = csv.DictReader(infile, delimiter=' ', fieldnames = fdname)
 
-                self.text_BNKoutput.insert(END, "Seed: " + self.seed + "\n")
+                self.text_BNKoutput.insert(END, "%-50s\tSEED\n" % (self.format_output(self.seed)))
             
                 for row in reader:
                     if row['type'].upper() == 'SHA1':
@@ -238,63 +247,67 @@ class epsig2():
                         if (os.path.isfile(self.mandir + "/" + row['fname'])):
 
                             # The following should return a list    
-                            cachedhit = self.checkCacheFilename(self.mandir + "/" + str(row['fname']), self.seed, row['type'].upper())
+                            cachedhit = self.checkCacheFilename(self.mandir + "/" + 
+                                str(row['fname']), self.seed, row['type'].upper())
 
                             if cachedhit:
                                 localhash = cachedhit
-                                # Append Object to Log
-                                # self.LogOutput.append({'filename': self.mandir + "/" + str(row['fname']), 'seed' : self.seed, 'alg': row['type'].upper(), 'verify':'0', 'hash': localhash })
                             else: 
                                 new_cache_list = list()
-                                localhash = self.dohash_hmacsha1(self.mandir + "/" + str(row['fname']), blocksize)
+                                localhash = self.dohash_hmacsha1(self.mandir + "/" + 
+                                    str(row['fname']), blocksize)
 
-                                seed_info = { 'seed': self.seed, 'alg': row['type'].upper(), 'verify':'0', 'hash': localhash }        
-                                cache_entry_list = self.cache_dict.get(self.mandir + "/" + str(row['fname'])) # Should return a list. 
+                                seed_info = { 
+                                    'seed': self.seed, 
+                                    'alg': row['type'].upper(), 
+                                    'verify':'0', 
+                                    'hash': localhash 
+                                }        
+                                
+                                cache_entry_list = self.cache_dict.get(self.mandir + "/" + 
+                                    str(row['fname'])) # Should return a list. 
                                 
                                 if cache_entry_list : # File Entry Exists, append to list
                                     cache_entry_list.append(seed_info) # print this
-                                    self.cache_dict[self.mandir + "/" + str(row['fname'])] = cache_entry_list # keep unique
+                                    self.cache_dict[self.mandir + "/" 
+                                        + str(row['fname'])] = cache_entry_list # keep unique
                                 else:  # No File Entry Exits generate new list entry in cache_dict
                                     new_cache_list.append(seed_info)
-                                    self.cache_dict[self.mandir + "/" + str(row['fname'])] = new_cache_list # keep unique
+                                    self.cache_dict[self.mandir + "/" + 
+                                        str(row['fname'])] = new_cache_list # keep unique
                                 
                                 if self.useCacheFile.get() == 1:
                                     self.updateCacheFile(self.cache_dict) # Update file cache
                                 else: 
-                                    self.cache_dict[self.mandir + "/" + str(row['fname'])] = new_cache_list # update local cache
-                                    #self.cache_dict[self.mandir + "/" + str(row['fname'])+"_"+self.seed] = localhash # only local hash
+                                    self.cache_dict[self.mandir + "/" + 
+                                        str(row['fname'])] = new_cache_list # update local cache
                                     
                             # Append Object to Log object
-                            self.LogOutput.append({'filename': str(row['fname']), 'filepath': self.mandir + "/" , 'seed' : self.seed, 'alg': row['type'].upper(), 'hash': localhash })
+                            self.LogOutput.append({'filename': str(row['fname']), 
+                                'filepath': self.mandir + "/" , 
+                                'seed' : self.seed, 
+                                'alg': row['type'].upper(), 
+                                'hash': localhash })
 
-                            self.resulthash = localhash
                             # handle incorrect seed length
                             if localhash == 0:
                                 break # exit out cleanly
-                        
-                            # include a space for every eight chars
-                            if (self.eightchar.get() == 1):
-                                eightchar_displaytext = self.insert_spaces(str(localhash), 8)
-                            else:
-                                eightchar_displaytext = str(localhash)
 
-                            if self.uppercase.get() == 0:
-                                self.text_BNKoutput.insert(END, eightchar_displaytext + " " + str(row['fname']) + "\n")
-                            else:
-                                self.text_BNKoutput.insert(END, eightchar_displaytext.upper() + " " + str(row['fname']) + "\n")
-
-                            # XOR strings, by first converting to numbers using int(), and providing expected base (16 for hex numbers)
-                            # Then two conversions, to perform the XOR operator "^" then convert back to hex
+                            self.resulthash = self.format_output(str(localhash))
                             
                             oh = hex(int(oh,16) ^ int(str(localhash), 16)) # XOR'ed result
                             
                             if cachedhit:
-                                print (str(localhash) + "\t" + str(row['fname']) + " (cached)") # Hash and Filename
+                                print("%-50s\t%-s\t%-10s" % (self.format_output(str(localhash)), 
+                                    str(row['fname']), "(cached)"))# Hash and Filename
                             else:
-                                print (str(localhash) + "\t" + str(row['fname']))
+                                print("%-50s\t%-s" % (self.format_output(str(localhash)), str(row['fname'])))# Hash and Filename
+                            
+                            self.text_BNKoutput.insert(END, "%-50s\t%s\n" % (self.format_output(str(localhash)), str(row['fname'])))
                             
                         else: 
-                            logging.error("Could not read file: " + str(row['fname']) + "\n")
+                            logging.error("Could not read file: " + str(row['fname']) + " in: " + fname)
+                            self.text_BNKoutput.insert(END, "\n!!!!!!!!!!!!!! ERROR: Could not read file: " + str(row['fname']) + " in: " + fname + "\n\n")
                     else: 
                         messagebox.showerror("Not Yet Implemented!", "Unsupported hash algorithm: " + row['type'].upper() + ".\n\nExiting. Sorry!")
                         logging.error('Unsupported hash algorithm: ' + row['type'])
@@ -313,9 +326,30 @@ class epsig2():
     def insert_spaces(self, text, s_range):
         return " ".join(text[i:i+s_range] for i in range(0, len(text), s_range))
 
+    def format_output(self, inputstr, myflag=False):
+        outputstr = ''
+        
+        # include a space for every eight chars
+        if (self.eightchar.get() == 1):
+            outputstr = self.insert_spaces(inputstr, 8)
+        else: 
+            outputstr = inputstr
+        
+        # uppercase
+        if self.uppercase.get() == 1: 
+            outputstr = outputstr.upper()
+        
+        # QCAS expected result
+        if myflag:
+            if (self.reverse.get() == 1):
+                outputstr = self.getQCAS_Expected_output(outputstr)
+        
+        return outputstr
+
     def processfile(self, fname, chunks):
         h = self.dobnk(fname, chunks)
         outstr = ''
+        tmpStr = ''
         
         # display to screen
         #for item in self.LogOutput:
@@ -325,56 +359,26 @@ class epsig2():
         if h == -1: 
             return # handle error in seed input
         else:
-            #outputstart = len(self.text_BNKoutput.get(0, END))
-            
-            self.text_BNKoutput.insert(END, "RAW output: " + str(h).zfill(40) + "\n")
+            self.text_BNKoutput.insert(END, "%-50s\t%s\n" % (str(h).zfill(40), "RAW output"))
 
             #strip 0x first
             tmpStr = str(h).lstrip('0X').zfill(40) # forces 40 characters with starting 0 characters. 
             tmpStr = str(h).lstrip('0x').zfill(40)
 
-            # include a space for every eight chars
-            if (self.eightchar.get() == 1):
-                eightchar_displaytext = self.insert_spaces(tmpStr, 8)
-            else: 
-                eightchar_displaytext = tmpStr
-
-            style.configure("self.text_BNKoutput", foreground="red") # RED text
+            # style.configure('self.text_BNKoutput', fg='red') # RED text
+            #self.text_BNKoutput.tag_add("alltext", END, len())
+            #self.text_BNKoutput.tag_config("alltext", background="yellow", foreground="red")
             
-            # Do QCAS expected result       
-            if (self.reverse.get() == 1):
-                if self.uppercase.get() == 1:
-                    displaystr = self.getQCAS_Expected_output(eightchar_displaytext)
-                    self.text_BNKoutput.insert(END, "QCAS Expected Result: " + displaystr.upper())
-                    print(displaystr.upper() + "\t" + "XOR")
-                    outstr = displaystr.upper()
-                else:
-                    displaystr = self.getQCAS_Expected_output(eightchar_displaytext)
-                    self.text_BNKoutput.insert(END, "QCAS Expected Result: " + displaystr) # Slice characters from the 8th-last position to the end
-                    print(displaystr + "\t" + "XOR")
-                    outstr = displaystr
+            # Display XOR Result    
+            if self.reverse.get() == 1:
+                self.text_BNKoutput.insert(END, "%-50s\tQCAS Expected Formatted Result\n" % (self.format_output(tmpStr, True)))
+            else: 
+                self.text_BNKoutput.insert(END, "%-50s\tXOR Formatted Result\n" % (self.format_output(tmpStr)))
+            print("%-50s\tXOR Result" % (self.format_output(tmpStr) ))
 
-            # Normal XOR result
-            elif (self.reverse.get() == 0): 
-                if self.uppercase.get() == 1:
-                    self.text_BNKoutput.insert(END, "XOR: " + eightchar_displaytext.upper())
-                    print(eightchar_displaytext.upper() + "\t" + "XOR")
-                    outstr = eightchar_displaytext.upper()
-                else:
-                    self.text_BNKoutput.insert(END, "XOR: " + eightchar_displaytext)
-                    print(eightchar_displaytext + "\t" + "XOR")
-                    outstr = eightchar_displaytext
+        return(self.format_output(tmpStr))            
 
-            else:
-                messagebox.showerror("Checkbox Error", "Unknown state")
-
-        style.configure("self.text_BNKoutput", foreground="black")       
-        self.text_BNKoutput.insert(END, "\n\n")
-
-        return(outstr)            
-
-    def writetofile(self, filename, xor_result):
-        
+    def writetoLogfile(self, filename, xor_result, bnkfile):
         timestamp = datetime.timestamp(datetime.now())
         outputfile = ''
         
@@ -383,13 +387,17 @@ class epsig2():
         else: # Single log file that's overwritten
             outputfile = filename
 
-        with open(outputfile, 'w+') as outfile:
-            outfile.writelines("#--8<-----------GENERATED: " + str(datetime.fromtimestamp(timestamp)) + " --------------------------\n")
-            outfile.writelines("%-40s \t %-40s \t %-60s\n" % ("SEED", "HASH", "FILENAME"))
+        with open(outputfile, 'a+') as outfile:
+            outfile.writelines("#--8<-----------GENERATED: " + 
+                str(datetime.fromtimestamp(timestamp)) + " --------------------------\n")
+            outfile.writelines("Processsed: " + bnkfile + "\n")
+            # outfile.writelines("%40s \t %40s \t %60s\n" % ("SEED", "HASH", "FILENAME"))
             for item in self.LogOutput:
-                outfile.writelines("%40s \t %40s \t %-60s\n" % (item['seed'], item['hash'], item['filename']))
+                outfile.writelines("%40s \t %40s \t %-60s\n" % (self.format_output(str(item['seed'])), 
+                    self.format_output(str(item['hash'])), item['filename']))
 
-            outfile.writelines("%40s \t %40s \t XOR\n" % (item['seed'], xor_result.replace(" ", "")))
+            outfile.writelines("%40s \t %40s \t XOR\n" % (self.format_output(str(item['seed'])), 
+                self.format_output(xor_result.replace(" ", ""))))
            
 
     def getQCAS_Expected_output(self, text):
@@ -436,18 +444,19 @@ class epsig2():
                             self.seed = self.combobox_SelectSeed.get()
 
                         if (self.clubs_expected_output.get() == 1):
-                            message = "QSIM reversed seed to use: " + self.getClubsQSIM_Expected_output(self.combobox_SelectSeed.get() + "\n")
+                            message = "\nQSIM reversed seed to use: " + self.getClubsQSIM_Expected_output(self.combobox_SelectSeed.get())
                             logging.info(message)
                             self.text_BNKoutput.insert(END, message)
 
                         logging.info("Seed is: " + self.seed)
                         xor_result = self.processfile(bnk_filepath, MAXIMUM_BLOCKSIZE_TO_READ)
 
-                # option to write to log selected.
-                if self.writetolog.get() == 1:  
-                    self.writetofile(EPSIG_LOGFILE, xor_result)
+                    # option to write to log selected.
+                    if self.writetolog.get() == 1:  
+                        self.writetoLogfile(EPSIG_LOGFILE, xor_result, bnk_filepath)
             else:
-                messagebox.showerror("Files not Chosen!", "Please select files first")
+                messagebox.showerror("BNK files not selected.", "Please select files first")
+        
         elif myButtonPress == '__clear_output__':
                 self.text_BNKoutput.delete(1.0, END)
                 
@@ -486,8 +495,6 @@ class epsig2():
                 if self.useCacheFile.get() == 1: # Use Cache File
                     self.importCacheFile() # Overwrite self.cache_dict with contents of file
                 else:
-                    #seed_info = [{ 'seed': '0x0000', 'alg':'hmac-sha1', 'verify':'0', 'hash': '0x1111' }]
-                    #empty_cache_data = { 'fname': seed_info }
                     self.cache_dict = {} # empty_cache_data # Clear cache_dict
 
         elif myButtonPress == '__print_cache__':
@@ -547,47 +554,72 @@ class epsig2():
         self.root.wm_title("epsig2 BNK file v" + VERSION)
         self.root.resizable(1,1)
         
+        ## Top Frame
         frame_toparea = ttk.Frame(self.root)
-        frame_toparea.pack(side = "top", fill=X, expand=False)
+        frame_toparea.pack(side = TOP, fill=X, expand=False)
         frame_toparea.config(relief = RIDGE, borderwidth = 0)
         
-        ttk.Label(frame_toparea, justify=LEFT,
-                  text = 'GUI script to process BNK files. Note: Supports only HMAC-SHA1').grid(row = 0, columnspan=4, padx=3, pady=3)
+        label_Heading = ttk.Label(frame_toparea, justify=LEFT, text = 'GUI script to process BNK files (Supports only HMAC-SHA1)')
+        label_Heading.grid(row=0, column=0, padx=3, pady=3, sticky='n')
+
+        ## BNK Selection Frame
+        frame_bnkSelectionFrame = ttk.Frame(frame_toparea)
+        frame_bnkSelectionFrame.config(relief = RIDGE, borderwidth = 1)
+        frame_bnkSelectionFrame.grid(row=1, column=0, padx=3, pady=3, sticky='w')
 
         # Button Selected BNK file
-        button_SelectedBNKfile = ttk.Button(frame_toparea, text = "Select BNK file...", width = 20,
+        button_SelectedBNKfile = ttk.Button(frame_bnkSelectionFrame, text = "Select BNK file...", width = 20,
                                                       command = lambda: self.handleButtonPress('__selected_bnk_file__'))                                             
-        button_SelectedBNKfile.grid(row=1, column=0, padx=5, pady=5, sticky='e')
+        button_SelectedBNKfile.grid(row=1, column=0, padx=5, pady=5, sticky='w')
         
         # Text Entry Selected BNK file
-        self.textfield_SelectedBNK = ttk.Entry(frame_toparea, width = 72)
+        self.textfield_SelectedBNK = ttk.Entry(frame_bnkSelectionFrame, width = 72)
         self.textfield_SelectedBNK.grid(row=1, column=1, sticky='w', padx=5, pady=5)
 
+        ## Seed Frame Area
+        frame_SeedFrame = ttk.Frame(frame_toparea) 
+        frame_SeedFrame.config(relief = RIDGE, borderwidth = 0)
+        frame_SeedFrame.grid(row=2, column=0, padx=3, pady=3)
+
+        frame_SelectSeed = ttk.Frame(frame_SeedFrame)
+        frame_SelectSeed.config(relief= RIDGE, borderwidth = 1)
+        frame_SelectSeed.grid(row=0, column=0, padx=3, pady=3) #(side=TOP, fill=BOTH, expand=False)
+
         # Button Selected Seed file (sl1)
-        button_Selectedsl1file = ttk.Button(frame_toparea, text = "Seed or SL1/MSL file...", width = 20, 
-                                                      command = lambda: self.handleButtonPress('__selected_seed_file__'))                                             
-        button_Selectedsl1file.grid(row=2, column=0, padx=5, pady=5, sticky='e')
+        button_Selectedsl1file = ttk.Button(frame_SelectSeed, 
+            text = "Seed or SL1/MSL file...", width = 20, 
+            command = lambda: self.handleButtonPress('__selected_seed_file__'))                                             
+        button_Selectedsl1file.grid(row=0, column=0, padx=5, pady=5, sticky='w')
 
         # Combo Box for Seeds, default to 0x00
         self.box_value = StringVar()
-        self.combobox_SelectSeed = ttk.Combobox(frame_toparea, justify=LEFT, textvariable=self.box_value, width = 70)
-        self.combobox_SelectSeed.grid(row=2, column=1, sticky='w', padx=5, pady=5)
+        self.combobox_SelectSeed = ttk.Combobox(frame_SelectSeed, 
+            justify=LEFT, 
+            textvariable=self.box_value, 
+            width = 70)
+        self.combobox_SelectSeed.grid(row=0, column=1, sticky='w', padx=5, pady=5)
         self.combobox_SelectSeed.set('0000000000000000000000000000000000000000')
 
         # Checkbutton MSL file (casinos)
         self.mslcheck = IntVar()
         self.mslcheck.set(0)
-        self.cb_mslcheck = Checkbutton(frame_toparea, text="MSL (Use Casino MSL File)", justify=LEFT, variable = self.mslcheck, onvalue=1, offvalue=0)
-        self.cb_mslcheck.grid(row=2, column=2, sticky='e',)
+        self.cb_mslcheck = Checkbutton(frame_SeedFrame, 
+            text="MSL (Use Casino MSL File)", 
+            justify=LEFT, 
+            variable = self.mslcheck, 
+            onvalue=1, 
+            offvalue=0)
+        self.cb_mslcheck.grid(row=0, column=2, sticky='w',)
         
         # Text Label sl1 location
-        self.label_SeedPath = ttk.Label(frame_toparea, text = 'No SL1/MSL Seed File Selected', width = 80)
-        self.label_SeedPath.grid(row=3, columnspan=4, padx=5, pady=5, sticky = 'w')
+        self.label_SeedPath = ttk.Label(frame_SeedFrame, 
+            text = 'No SL1/MSL Seed File Selected', width = 80)
+        self.label_SeedPath.grid(row=3, column=0, padx=5, pady=5, sticky = 'w')
 
         ######################### MIDDLE FRAME
         frame_middleframe = ttk.Frame(self.root)
         frame_middleframe.pack(side = TOP, fill=BOTH, expand=True)
-        
+
         # Need to use .pack() for scrollbar and text widget
         frame_textarea = ttk.Labelframe(frame_middleframe, text="Output Field")
         frame_textarea.pack(side = LEFT, fill=BOTH, expand=True)
@@ -595,9 +627,9 @@ class epsig2():
 
         # Text Area output of BNK file generation
         self.text_BNKoutput = Text(frame_textarea, height=30)
-        S = Scrollbar(frame_textarea, command=self.text_BNKoutput.yview)
-        S.pack(side=RIGHT, fill=Y)
-        self.text_BNKoutput.configure(yscrollcommand=S.set)
+        myscrollbar = Scrollbar(frame_textarea, command=self.text_BNKoutput.yview)
+        myscrollbar.pack(side=RIGHT, fill=Y)
+        self.text_BNKoutput.configure(yscrollcommand=myscrollbar.set)
         self.text_BNKoutput.pack(side=LEFT, fill=BOTH, expand=True)
         
         #Frame for Checkbuttons
@@ -608,37 +640,73 @@ class epsig2():
         # Checkbutton Reverse
         self.reverse = IntVar()
         self.reverse.set(0)
-        self.cb_reverse = Checkbutton(frame_checkbuttons, text="QCAS expected output", justify=LEFT, variable = self.reverse, onvalue=1, offvalue=0)
+        self.cb_reverse = Checkbutton(
+            frame_checkbuttons, 
+            text="QCAS expected output", 
+            justify=LEFT, 
+            variable = self.reverse, 
+            onvalue=1, 
+            offvalue=0)
         self.cb_reverse.grid(row=1, column=1, sticky='w')
 
         # Checkbutton QSIM expected Seed 
         self.clubs_expected_output = IntVar()
         self.clubs_expected_output.set(0)
-        self.cb_clubs_expected_output = Checkbutton(frame_checkbuttons, text="Display QSIM expected seed", justify=LEFT, variable = self.clubs_expected_output, onvalue=1, offvalue=0)
+        self.cb_clubs_expected_output = Checkbutton(
+            frame_checkbuttons, 
+            text="Display QSIM expected seed", 
+            justify=LEFT, 
+            variable = self.clubs_expected_output, 
+            onvalue=1, 
+            offvalue=0)
         self.cb_clubs_expected_output.grid(row=2, column=1, sticky='w')
 
         # Checkbutton Uppercase
         self.uppercase = IntVar()
         self.uppercase.set(1)
-        self.cb_uppercase = Checkbutton(frame_checkbuttons, text="Uppercase", justify=LEFT, variable = self.uppercase, onvalue=1, offvalue=0)
+        self.cb_uppercase = Checkbutton(
+            frame_checkbuttons, 
+            text="Uppercase", 
+            justify=LEFT, 
+            variable = self.uppercase, 
+            onvalue=1, 
+            offvalue=0)
         self.cb_uppercase.grid(row=3, column=1, sticky='w')
 
         # Checkbutton 8 Char
         self.eightchar = IntVar()
         self.eightchar.set(1)
-        self.cb_eightchar = Checkbutton(frame_checkbuttons, text="8 character spacing", justify=LEFT, variable = self.eightchar, onvalue=1, offvalue=0)
+        self.cb_eightchar = Checkbutton(
+            frame_checkbuttons, 
+            text="8 character spacing", 
+            justify=LEFT, 
+            variable = self.eightchar, 
+            onvalue=1, 
+            offvalue=0)
         self.cb_eightchar.grid(row=4, column=1, sticky='w',)
 
         # Checkbutton Write to Log
         self.writetolog = IntVar()
         self.writetolog.set(1)
-        self.cb_writetolog = Checkbutton(frame_checkbuttons, text="Write to Log File\noutput: epsig2.log", justify=LEFT, variable = self.writetolog, onvalue=1, offvalue=0)
+        self.cb_writetolog = Checkbutton(
+            frame_checkbuttons, 
+            text="Log File: epsig2.log", 
+            justify=LEFT, 
+            variable = self.writetolog, 
+            onvalue=1, 
+            offvalue=0)
         self.cb_writetolog.grid(row=5, column=1, sticky='w',)
 
         # Timestamp logs
         self.logtimestamp = IntVar()
         self.logtimestamp.set(0)
-        self.cb_logtimestamp = Checkbutton(frame_checkbuttons, text="Timestamp Log File\noutput: epsig2-logs/epsig2-{timestamp}.log", justify=LEFT, variable = self.logtimestamp, onvalue=1, offvalue=0)
+        self.cb_logtimestamp = Checkbutton(
+            frame_checkbuttons, 
+            text="Multiple Log Files: epsig2-logs/", 
+            justify=LEFT, 
+            variable = self.logtimestamp, 
+            onvalue=1, 
+            offvalue=0)
         self.cb_logtimestamp.grid(row=6, column=1, sticky='w',)
 
         ################ Bottom FRAME ##############
@@ -652,46 +720,68 @@ class epsig2():
         frame_controlbuttons.config(relief = None, borderwidth = 1)
         
         # Clear Button
-        self.button_clear = ttk.Button(frame_controlbuttons, text = "Clear Form", command = lambda: self.handleButtonPress('__clear__'), width = 15)
+        self.button_clear = ttk.Button(
+            frame_controlbuttons, 
+            text = "Clear Form", 
+            command = lambda: self.handleButtonPress('__clear__'), 
+            width = 15)
         self.button_clear.grid(row=1, column = 1, padx=5, pady=5, sticky='w',)
 
         # Clear Output
-        button_clear_output = ttk.Button(frame_controlbuttons, text = "Clear Output Field",
-                                  command = lambda: self.handleButtonPress('__clear_output__'), width = 16)
+        button_clear_output = ttk.Button(
+            frame_controlbuttons, 
+            text = "Clear Output Field",
+            command = lambda: self.handleButtonPress('__clear_output__'),
+            width = 16)
         button_clear_output.grid(row=1, column=2, sticky='w', padx=5, pady=5)
 
         # Start Button
-        button_start = ttk.Button(frame_controlbuttons, text = "Generate Hash...",
-                                  command = lambda: self.handleButtonPress('__start__'), width = 16)
+        button_start = ttk.Button(
+            frame_controlbuttons, 
+            text = "Generate Hash...",
+            command = lambda: self.handleButtonPress('__start__'), 
+            width = 16)
         button_start.grid(row=1, column=3, sticky='w', padx=5, pady=5)
 
         ################ Bottom Cache FRAME ##############
         frame_cachebuttons = ttk.Frame(frame_bottombuttons)
-        #frame_cachebuttons.grid(row = 2, columnspan = 4, padx=5, pady=5, sticky='w')
         frame_cachebuttons.pack(side=BOTTOM, fill=X, expand = True)
         frame_cachebuttons.config(relief = None, borderwidth = 1)
 
         # Print Cache Button
-        button_cache = ttk.Button(frame_cachebuttons, text = "Print Cache",
-                                  command = lambda: self.handleButtonPress('__print_cache__'), width = 15)
+        button_cache = ttk.Button(frame_cachebuttons, 
+            text = "Print Cache",
+            command = lambda: self.handleButtonPress('__print_cache__'),
+            width = 15)
         button_cache.grid(row=1, column=3, sticky='w', padx=5, pady=5)
         
         # Clear Cache Button
-        self.button_clear_cache = ttk.Button(frame_cachebuttons, text = "Clear Local Cache",
-                                  command = lambda: self.handleButtonPress('__clear_cache__'), width = 18)
+        self.button_clear_cache = ttk.Button(
+            frame_cachebuttons, 
+            text = "Clear Local Cache",
+            command = lambda: self.handleButtonPress('__clear_cache__'), 
+            width = 18)
         self.button_clear_cache.grid(row=1, column=4, sticky='w', padx=5, pady=5)
 
         # Checkbutton Use Cache File
         self.useCacheFile = IntVar()
         self.useCacheFile.set(0)
-        self.cb_useCacheFile = Checkbutton(frame_cachebuttons, text="Use File Cache:", justify=LEFT, variable = self.useCacheFile, onvalue=1, offvalue=0)
+        self.cb_useCacheFile = Checkbutton(
+            frame_cachebuttons, 
+            text="Use File Cache:", 
+            justify=LEFT, 
+            variable = self.useCacheFile, 
+            onvalue=1, 
+            offvalue=0)
         self.cb_useCacheFile.grid(row=1, column=1, sticky='w', padx=3, pady=3)
         
         # Select Cache file button
         self.CacheFileButtonText = StringVar()
         self.CacheFileButtonText.set(DEFAULT_CACHE_FILE)
-        self.button_select_cache_button = ttk.Button(frame_cachebuttons, textvariable = self.CacheFileButtonText,
-                                  command = lambda: self.handleButtonPress('__select_cache_file__'))
+        self.button_select_cache_button = ttk.Button(
+            frame_cachebuttons, 
+            textvariable = self.CacheFileButtonText,
+            command = lambda: self.handleButtonPress('__select_cache_file__'))
         self.button_select_cache_button.grid(row=1, column=2, sticky='w', padx=3, pady=3)
         
         if self.useCacheFile.get() == 1: # Use Cache File
@@ -701,9 +791,7 @@ class epsig2():
             self.button_clear_cache.state(["!disabled"])
             self.button_clear_cache.config(state=not DISABLED)
 
-
         self.root.mainloop()
-
 
     # Constructor
     def __init__(self):
