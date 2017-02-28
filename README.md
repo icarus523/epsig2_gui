@@ -29,12 +29,10 @@ Don't include the quotes.
 
 EXAMPLES OF BNK FILES
 
-Konami (QCOM)	 MOBQ8D14.bnk (2 lines) = 
-
-Q13prog.bin PS32 p
+Konami (QCOM) MOBQ8D14.bnk (2 lines) = 
+Q13prog.bin PS32 p 
 MOBQ8D14.bin PS32 p
 
 IGT (QCOM OA4) sc0130b1.bnk (2 lines) = 
-
 oa40227a.bin OA4R p
 sc0130b1.bin OA4F p
