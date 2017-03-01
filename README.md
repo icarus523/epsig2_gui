@@ -31,7 +31,7 @@ Where:-
    This field must be present and must always be equal to "p"  
    Don't include the quotes.  
 
-### EXAMPLES OF BNK FILES
+### Examples of BNK files
 
     Konami (QCOM) MOBQ8D14.bnk (2 lines) =  
     Q13prog.bin PS32 p  
