@@ -125,7 +125,7 @@ class epsig2():
                 # Check if Seed and Algorithm matches. 
                 if item['seed'] == seed_input and item['alg'] == alg_input: 
                     verified_time = item['verify'] 
-                    return(str(item['hash']) # return Hash result
+                    return(str(item['hash'])) # return Hash result
         else:
             return 0
 
