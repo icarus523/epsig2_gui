@@ -566,30 +566,30 @@ class epsig2():
         frame_bnkSelectionFrame = ttk.Frame(frame_toparea)
         frame_bnkSelectionFrame.config(relief = RIDGE, borderwidth = 1)
         frame_bnkSelectionFrame.grid(row=1, column=0, padx=3, pady=3, sticky='w')
-
+        
         # Button Selected BNK file
         button_SelectedBNKfile = ttk.Button(frame_bnkSelectionFrame, text = "Select BNK file...", width = 20,
                                                       command = lambda: self.handleButtonPress('__selected_bnk_file__'))                                             
-        button_SelectedBNKfile.grid(row=1, column=0, padx=5, pady=5, sticky='w')
+        button_SelectedBNKfile.grid(row=0, column=0, padx=3, pady=3, sticky='e')
         
         # Text Entry Selected BNK file
-        self.textfield_SelectedBNK = ttk.Entry(frame_bnkSelectionFrame, width = 72)
-        self.textfield_SelectedBNK.grid(row=1, column=1, sticky='w', padx=5, pady=5)
+        self.textfield_SelectedBNK = ttk.Entry(frame_bnkSelectionFrame, width = 103)
+        self.textfield_SelectedBNK.grid(row=0, column=1, sticky='w', padx=5, pady=5)
 
         ## Seed Frame Area
         frame_SeedFrame = ttk.Frame(frame_toparea) 
-        frame_SeedFrame.config(relief = RIDGE, borderwidth = 0)
+        frame_SeedFrame.config(relief = RIDGE, borderwidth = 1)
         frame_SeedFrame.grid(row=2, column=0, padx=3, pady=3)
 
         frame_SelectSeed = ttk.Frame(frame_SeedFrame)
-        frame_SelectSeed.config(relief= RIDGE, borderwidth = 1)
+        frame_SelectSeed.config(relief= None, borderwidth = 1)
         frame_SelectSeed.grid(row=0, column=0, padx=3, pady=3) #(side=TOP, fill=BOTH, expand=False)
 
         # Button Selected Seed file (sl1)
         button_Selectedsl1file = ttk.Button(frame_SelectSeed, 
             text = "Seed or SL1/MSL file...", width = 20, 
             command = lambda: self.handleButtonPress('__selected_seed_file__'))                                             
-        button_Selectedsl1file.grid(row=0, column=0, padx=5, pady=5, sticky='w')
+        button_Selectedsl1file.grid(row=0, column=0, padx=5, pady=5, sticky='n')
 
         # Combo Box for Seeds, default to 0x00
         self.box_value = StringVar()
@@ -626,7 +626,7 @@ class epsig2():
         frame_textarea.config(relief = RIDGE, borderwidth = 2)
 
         # Text Area output of BNK file generation
-        self.text_BNKoutput = Text(frame_textarea, height=30)
+        self.text_BNKoutput = Text(frame_textarea, height=25, width =80)
         myscrollbar = Scrollbar(frame_textarea, command=self.text_BNKoutput.yview)
         myscrollbar.pack(side=RIGHT, fill=Y)
         self.text_BNKoutput.configure(yscrollcommand=myscrollbar.set)
