@@ -41,7 +41,6 @@ Where:-
     oa40227a.bin OA4R p  
     sc0130b1.bin OA4F p  
 
-### Latest Changes v1.4.2  
-- add option to write to formatted log file (request by Y### L##)  
-- add option to display flipped bits for Seed in Console Log as an option. (request by D### N#####)  
-- Update json signature file verifications to use SHA256
+### Latest Changes v1.4.3
+- Implement Hashing weighting
+- Implement individual Manufacturer Cache File. 
