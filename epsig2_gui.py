@@ -40,6 +40,7 @@
 #        - add option to display flipped bits for Seed in Console Log as an option.
 #          (request by D### N#####)
 #        - Update json signature file verifications to use SHA256
+# v1.4.3 - Exits out when BNK file does not exist. 
 
 import os
 import sys
@@ -65,7 +66,7 @@ from tkinter import filedialog
 from threading import Thread
 from datetime import datetime
 
-VERSION = "1.4.2 (Log File Option)"
+VERSION = "1.4.3 (BNK files exit on error)"
 
 EPSIG_LOGFILE = "epsig2.log"
 MAXIMUM_BLOCKSIZE_TO_READ = 65535
@@ -307,15 +308,17 @@ class epsig2():
                             
                         else: 
                             logging.error("Could not read file: " + str(row['fname']) + " in: " + fname)
+                            messagebox.showerror("File not Found", "Could not read file: " + str(row['fname']) + " in: " + fname)
                             self.text_BNKoutput.insert(END, "\n!!!!!!!!!!!!!! ERROR: Could not read file: " + str(row['fname']) + " in: " + fname + "\n\n")
+                            return -1
                     else: 
                         messagebox.showerror("Not Yet Implemented!", "Unsupported hash algorithm: " + row['type'].upper() + ".\n\nExiting. Sorry!")
                         logging.error('Unsupported hash algorithm: ' + row['type'])
                         # Need to implement CR16, CR32, PS32, PS16, OA4F and OA4R, and SHA256 if need be. 
 
-            except csv.Error() as e:
-                messagebox.showerror("CSV Parsing Error", "Malformed BNK entry, check the file manually" + row['type'].upper() + ".\n\nExiting.")
-                sys.exit('file %s, line %d: %s' % (filename, reader.line_num, e))
+            #except csv.Error() as e:
+            #    messagebox.showerror("CSV Parsing Error", "Malformed BNK entry, check the file manually" + row['type'].upper() + ".\n\nExiting.")
+                # sys.exit('file %s, line %d: %s' % (filename, reader.line_num, e))
             except KeyboardInterrupt:
                 logging.DEBUG("Keyboard interrupt during processing of files. Exiting")
                 sys.exit(1)
@@ -357,7 +360,7 @@ class epsig2():
 
         style = ttk.Style()
         if h == -1: 
-            return # handle error in seed input
+            return -1 # handle error in seed input
         else:
             self.text_BNKoutput.insert(END, "%-50s\t%s\n" % (str(h).zfill(40), "RAW output"))
 
@@ -452,7 +455,7 @@ class epsig2():
                         xor_result = self.processfile(bnk_filepath, MAXIMUM_BLOCKSIZE_TO_READ)
 
                     # option to write to log selected.
-                    if self.writetolog.get() == 1:  
+                    if self.writetolog.get() == 1 and xor_result != -1:  
                         self.writetoLogfile(EPSIG_LOGFILE, xor_result, bnk_filepath)
             else:
                 messagebox.showerror("BNK files not selected.", "Please select files first")
