@@ -40,6 +40,8 @@
 #        - add option to display flipped bits for Seed in Console Log as an option.
 #          (request by D### N#####)
 #        - Update json signature file verifications to use SHA256
+# v1.4.3 - Exits out when BNK file does not exist.
+# v1.4.4 - GUI modifications, removal of grid vs pack
 
 import os
 import sys
@@ -65,7 +67,7 @@ from tkinter import filedialog
 from threading import Thread
 from datetime import datetime
 
-VERSION = "1.4.2 (Log File Option)"
+VERSION = "1.4.4"
 
 EPSIG_LOGFILE = "epsig2.log"
 MAXIMUM_BLOCKSIZE_TO_READ = 65535
@@ -307,15 +309,17 @@ class epsig2():
                             
                         else: 
                             logging.error("Could not read file: " + str(row['fname']) + " in: " + fname)
+                            messagebox.showerror("File not Found", "Could not read file: " + str(row['fname']) + " in: " + fname)
                             self.text_BNKoutput.insert(END, "\n!!!!!!!!!!!!!! ERROR: Could not read file: " + str(row['fname']) + " in: " + fname + "\n\n")
+                            return -1
                     else: 
                         messagebox.showerror("Not Yet Implemented!", "Unsupported hash algorithm: " + row['type'].upper() + ".\n\nExiting. Sorry!")
                         logging.error('Unsupported hash algorithm: ' + row['type'])
                         # Need to implement CR16, CR32, PS32, PS16, OA4F and OA4R, and SHA256 if need be. 
 
-            except csv.Error() as e:
-                messagebox.showerror("CSV Parsing Error", "Malformed BNK entry, check the file manually" + row['type'].upper() + ".\n\nExiting.")
-                sys.exit('file %s, line %d: %s' % (filename, reader.line_num, e))
+            #except csv.Error() as e:
+            #    messagebox.showerror("CSV Parsing Error", "Malformed BNK entry, check the file manually" + row['type'].upper() + ".\n\nExiting.")
+                # sys.exit('file %s, line %d: %s' % (filename, reader.line_num, e))
             except KeyboardInterrupt:
                 logging.DEBUG("Keyboard interrupt during processing of files. Exiting")
                 sys.exit(1)
@@ -357,7 +361,7 @@ class epsig2():
 
         style = ttk.Style()
         if h == -1: 
-            return # handle error in seed input
+            return -1 # handle error in seed input
         else:
             self.text_BNKoutput.insert(END, "%-50s\t%s\n" % (str(h).zfill(40), "RAW output"))
 
@@ -452,7 +456,7 @@ class epsig2():
                         xor_result = self.processfile(bnk_filepath, MAXIMUM_BLOCKSIZE_TO_READ)
 
                     # option to write to log selected.
-                    if self.writetolog.get() == 1:  
+                    if self.writetolog.get() == 1 and xor_result != -1:  
                         self.writetoLogfile(EPSIG_LOGFILE, xor_result, bnk_filepath)
             else:
                 messagebox.showerror("BNK files not selected.", "Please select files first")
@@ -548,56 +552,76 @@ class epsig2():
             self.combobox_SelectSeed['values'] = self.processsl1file(fname)
         else:
             messagebox.showerror("Expected SL1 or MSL file to Process", fname + " is not a valid seed file")
-            sys.exit(1)                 
+            sys.exit(1)
+
+    def aboutwindow(self):
+        about_script = "Version: v" + VERSION + " by aceretjr\n python 3 script for processing BNK files."
+        messagebox.showinfo("About This Script", about_script)
 
     def setupGUI(self):
         self.root.wm_title("epsig2 BNK file v" + VERSION)
         self.root.resizable(1,1)
+
+        menubar = tk.Menu(self.root)
+        filemenu = tk.Menu(menubar, tearoff=0)
+        optionmenu = tk.Menu(menubar, tearoff=0)
+        helpmenu = tk.Menu(menubar, tearoff=0)
+
+
+        menubar.add_cascade(label="File", menu=filemenu)
+        menubar.add_cascade(label="Option", menu=optionmenu)
+        menubar.add_cascade(label="Help", menu=helpmenu)
+        helpmenu.add_command(label="About...", command=self.aboutwindow)
+        #optionmenu.add_command(label="Preferences...", command=self.MenuBar_Config) # start this script now. 
+        filemenu.add_command(label="Exit", command=self.root.destroy)
         
-        ## Top Frame
+        self.root.config(menu=menubar)
+
+        
+        ######## Top Frame
         frame_toparea = ttk.Frame(self.root)
         frame_toparea.pack(side = TOP, fill=X, expand=False)
         frame_toparea.config(relief = RIDGE, borderwidth = 0)
         
-        label_Heading = ttk.Label(frame_toparea, justify=LEFT, text = 'GUI script to process BNK files (Supports only HMAC-SHA1)')
-        label_Heading.grid(row=0, column=0, padx=3, pady=3, sticky='n')
+        ttk.Label(frame_toparea, justify=LEFT,
+                                  text = 'GUI script to process BNK files (Supports only HMAC-SHA1)').pack(side=TOP, padx=3, pady=3, fill=X, expand=True, anchor='n')
 
-        ## BNK Selection Frame
+        ######## BNK Selection Frame
         frame_bnkSelectionFrame = ttk.Frame(frame_toparea)
         frame_bnkSelectionFrame.config(relief = RIDGE, borderwidth = 1)
-        frame_bnkSelectionFrame.grid(row=1, column=0, padx=3, pady=3, sticky='w')
-        
+        frame_bnkSelectionFrame.pack(side = TOP, padx  = 3, pady = 3, expand = False, fill=X, anchor = 'w')       
+                                     
         # Button Selected BNK file
-        button_SelectedBNKfile = ttk.Button(frame_bnkSelectionFrame, text = "Select BNK file...", width = 20,
+        button_SelectedBNKfile = ttk.Button(frame_bnkSelectionFrame, text = "Select BNK file...", width=20, 
                                                       command = lambda: self.handleButtonPress('__selected_bnk_file__'))                                             
-        button_SelectedBNKfile.grid(row=0, column=0, padx=3, pady=3, sticky='e')
+        button_SelectedBNKfile.pack(side=LEFT, padx = 3, pady = 3, fill=X, expand=False)
         
         # Text Entry Selected BNK file
         self.textfield_SelectedBNK = ttk.Entry(frame_bnkSelectionFrame, width = 103)
-        self.textfield_SelectedBNK.grid(row=0, column=1, sticky='w', padx=5, pady=5)
+        self.textfield_SelectedBNK.pack(side=LEFT, fill=X, padx = 3, pady = 3, expand=True)
 
-        ## Seed Frame Area
+        ########### Seed Frame Area
         frame_SeedFrame = ttk.Frame(frame_toparea) 
         frame_SeedFrame.config(relief = RIDGE, borderwidth = 1)
-        frame_SeedFrame.grid(row=2, column=0, padx=3, pady=3)
-
-        frame_SelectSeed = ttk.Frame(frame_SeedFrame)
+        frame_SeedFrame.pack(side=TOP, fill=X, padx = 3, pady = 3, expand=True)
+ 
+        frame_SelectSeed = ttk.Frame(frame_toparea)
         frame_SelectSeed.config(relief= None, borderwidth = 1)
-        frame_SelectSeed.grid(row=0, column=0, padx=3, pady=3) #(side=TOP, fill=BOTH, expand=False)
+        frame_SelectSeed.pack(side=TOP, fill=X, padx = 3, pady = 3, expand=True)
 
         # Button Selected Seed file (sl1)
-        button_Selectedsl1file = ttk.Button(frame_SelectSeed, 
+        button_Selectedsl1file = ttk.Button(frame_SeedFrame, 
             text = "Seed or SL1/MSL file...", width = 20, 
             command = lambda: self.handleButtonPress('__selected_seed_file__'))                                             
-        button_Selectedsl1file.grid(row=0, column=0, padx=5, pady=5, sticky='n')
+        button_Selectedsl1file.pack(side=LEFT, fill=X, padx = 3, pady = 3, expand=False)
 
         # Combo Box for Seeds, default to 0x00
         self.box_value = StringVar()
-        self.combobox_SelectSeed = ttk.Combobox(frame_SelectSeed, 
+        self.combobox_SelectSeed = ttk.Combobox(frame_SeedFrame, 
             justify=LEFT, 
             textvariable=self.box_value, 
             width = 70)
-        self.combobox_SelectSeed.grid(row=0, column=1, sticky='w', padx=5, pady=5)
+        self.combobox_SelectSeed.pack(side=LEFT, fill=X, padx = 3, pady = 3, expand=True)
         self.combobox_SelectSeed.set('0000000000000000000000000000000000000000')
 
         # Checkbutton MSL file (casinos)
@@ -609,13 +633,13 @@ class epsig2():
             variable = self.mslcheck, 
             onvalue=1, 
             offvalue=0)
-        self.cb_mslcheck.grid(row=0, column=2, sticky='w',)
+        self.cb_mslcheck.pack(side=LEFT, fill=X, padx = 3, pady = 3, expand=False)
         
         # Text Label sl1 location
-        self.label_SeedPath = ttk.Label(frame_SeedFrame, 
+        self.label_SeedPath = ttk.Label(frame_toparea, 
             text = 'No SL1/MSL Seed File Selected', width = 80)
-        self.label_SeedPath.grid(row=3, column=0, padx=5, pady=5, sticky = 'w')
-
+        self.label_SeedPath.pack(side=BOTTOM, fill=X, padx = 3, pady = 3, expand=True)
+        
         ######################### MIDDLE FRAME
         frame_middleframe = ttk.Frame(self.root)
         frame_middleframe.pack(side = TOP, fill=BOTH, expand=True)
