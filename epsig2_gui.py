@@ -40,6 +40,9 @@
 #        - add option to display flipped bits for Seed in Console Log as an option.
 #          (request by D### N#####)
 #        - Update json signature file verifications to use SHA256
+# v1.5 - separate hashing function (epsig2) from GUI
+#       - separate Cache File as a separate class
+#        - hashing function is now threaded
 
 import os
 import sys
@@ -57,6 +60,8 @@ import tkinter as tk
 import getpass
 import logging
 import threading
+import time 
+import concurrent.futures
 
 from tkinter import *
 from tkinter import messagebox
@@ -65,15 +70,135 @@ from tkinter import filedialog
 from threading import Thread
 from datetime import datetime
 
-VERSION = "1.4.2 (Log File Option)"
+VERSION = "1.5"
 
 EPSIG_LOGFILE = "epsig2.log"
 MAXIMUM_BLOCKSIZE_TO_READ = 65535
-VERIFY_THRESHOLD = 5 # Number of Hashes Generated before it can be trusted
 DEFAULT_CACHE_FILE = "\\\Justice.qld.gov.au\\Data\\OLGR-TECHSERV\\TSS Applications Source\\James\\epsig2_cachefile_v2.json"
 p_reset = "\x08"*8
 
+## CacheFile class
+class CacheFile(): 
+
+    def __init__(self, fname):
+        logging.basicConfig(level=logging.DEBUG, format=' %(asctime)s - %(levelname)s- %(message)s')    
+
+        self.user_cache_file = fname
+        self.cache_dict = self.importCacheFile() # read file
+
+    def importCacheFile(self):
+        cache_data = ''
+        if self.user_cache_file: # Handle User selectable Cache File
+            cache_location = self.user_cache_file
+        else: 
+            cache_location = DEFAULT_CACHE_FILE
+        
+        if os.path.isfile(cache_location): 
+            # Verify Cache Integrity
+            if self.verifyCacheIntegrity(cache_location[:-4] + "sigs"): 
+                with open(cache_location,'r') as json_cachefile: 
+                    cache_data = json.load(json_cachefile)
+            else: 
+                logging.warning("**** WARNING **** File Cache integrity issue: " +
+                        " Cannot Verify signature")
+                logging.info("Generating new File Cache file:" + cache_location)
+                cache_data = {} # return empty cache
+        else:
+            logging.info(cache_location + 
+                " cannot be found. Generating default file...")
+            with open(cache_location, 'w') as json_cachefile:
+                # write empty json file
+                json.dump({}, 
+                    json_cachefile, 
+                    sort_keys=True, 
+                    indent=4, 
+                    separators=(',', ': '))
+        
+        return(cache_data)
+
+    def verifyCacheIntegrity(self, cache_location_sigs): 
+        if os.path.isfile(cache_location_sigs): # Sigs file exist?
+            with open(cache_location_sigs, 'r') as sigs_file: 
+                cache_sigs_data = json.load(sigs_file)
+                my_hash = cache_sigs_data['cachefile_hash']
+                fname = cache_sigs_data['filename']
+                
+                generated_hash = epsig2.dohash_sha256(self, fname)
+                if my_hash == generated_hash: 
+                    return True
+                else: 
+                    return False     
+        else: 
+            # advise user
+            logging.warning("\n**** WARNING **** Generating new Cache Sigs file\n") 
+            if self.user_cache_file: # Handle User selectable Cache File
+                cache_location = self.user_cache_file
+            else: 
+                cache_location = DEFAULT_CACHE_FILE
+            
+            self.signCacheFile(cache_location) # Generate Cache
+        
+    def signCacheFile(self, cache_location):
+        sigsCacheFile = cache_location[:-4] + "sigs" # .json file renaming to .sigs file
+        
+        with open(sigsCacheFile,'w') as sigs_file: 
+            h = epsig2.dohash_sha256(self, cache_location) # requires file name as input
+            
+            timestamp = datetime.now()
+            sigs_dict = { 'cachefile_hash' : h,
+                          'filename': cache_location,
+                          'last_generated_by_user' : getpass.getuser(),
+                          'date': str(timestamp.strftime("%Y-%m-%d %H:%M"))
+                        }
+            
+            json.dump(sigs_dict,
+                      sigs_file,
+                      sort_keys=True,
+                      indent=4,
+                      separators=(',', ': '))
+        
+    def updateCacheFile(self, cache_dict):
+        if self.user_cache_file:
+            cache_location = self.user_cache_file
+        else: 
+            cache_location = DEFAULT_CACHE_FILE
+            
+        if os.path.isfile(cache_location):
+            with open(cache_location, 'w') as json_cachefile:
+                json.dump(cache_dict,
+                          json_cachefile,
+                          sort_keys=True,
+                          indent=4,
+                          separators=(',', ': '))
+            
+            self.signCacheFile(cache_location) # Sign Cache
+
+## Main epsig2 class
 class epsig2():
+
+    def __init__(self, seed, filepath, options_d, cache_dict):
+        logging.basicConfig(level=logging.DEBUG, format=' %(asctime)s - %(levelname)s- %(message)s')
+        self.seed = seed 
+        self.bnk_filepath = filepath
+        self.options_d = options_d
+        self.mandir = os.path.dirname(self.bnk_filepath)
+        self.cache_dict = cache_dict
+        self.xor_result = ''
+        self.LogOutput = list() 
+        self.output = list() 
+        self.user_cache_file = options_d['usr_cache_file']
+
+    def checkCacheFilename(self, filename, seed_input, alg_input): # alg_input 
+        # For filename_seed, concatenate to form unique string. 
+        if filename in self.cache_dict.keys(): # a hit?
+            data = self.cache_dict.get(filename) # now a list
+            for item in data:
+                # Check if Seed and Algorithm matches. 
+                if item['seed'] == seed_input and item['alg'] == alg_input: 
+                    verified_time = item['verify'] 
+                    return(str(item['hash'])) # return Hash result
+        else:
+            return 0
 
     # input: file to be CRC32 
     def dohash_crc32(self, fname):
@@ -115,114 +240,16 @@ class epsig2():
         return m.hexdigest()
     
     def checkhexchars(self, text):
-        return (all(c in string.hexdigits for c in text))    
+        return (all(c in string.hexdigits for c in text))            
 
-    def checkCacheFilename(self, filename, seed_input, alg_input): # alg_input
-        # For filename_seed, concatenate to form unique string. 
-        if filename in self.cache_dict.keys(): # a hit?
-            data = self.cache_dict.get(filename) # now a list
-            for item in data:
-                # Check if Seed and Algorithm matches. 
-                if item['seed'] == seed_input and item['alg'] == alg_input: 
-                    verified_time = item['verify'] 
-                    return(str(item['hash'])) # return Hash result
-        else:
-            return 0
 
-    def importCacheFile(self):
-        cache_data = ''
-        if self.user_cache_file: # Handle User selectable Cache File
-            cache_location = self.user_cache_file
-        else: 
-            cache_location = DEFAULT_CACHE_FILE
-        
-        if os.path.isfile(cache_location): 
-            # Verify Cache Integrity
-            if self.verifyCacheIntegrity(cache_location[:-4] + "sigs"): 
-                with open(cache_location,'r') as json_cachefile: 
-                    cache_data = json.load(json_cachefile)
-            else: 
-                logging.warning("**** WARNING **** File Cache integrity issue: " +
-                        " Cannot Verify signature")
-                logging.info("Generating new File Cache file:" + cache_location)
-                cache_data = {} # return empty cache
-        else:
-            logging.info(cache_location + 
-                " cannot be found. Generating default file...")
-            with open(cache_location, 'w') as json_cachefile:
-                # write empty json file
-                json.dump({}, 
-                    json_cachefile, 
-                    sort_keys=True, 
-                    indent=4, 
-                    separators=(',', ': '))
-        
-        return(cache_data)
-
-    def verifyCacheIntegrity(self, cache_location_sigs): 
-        if os.path.isfile(cache_location_sigs): # Sigs file exist?
-            with open(cache_location_sigs, 'r') as sigs_file: 
-                cache_sigs_data = json.load(sigs_file)
-                hash = cache_sigs_data['cachefile_hash']
-                fname = cache_sigs_data['filename']
-                
-                generated_hash = self.dohash_sha256(fname)
-                if hash == generated_hash: 
-                    return True
-                else: 
-                    return False     
-        else: 
-            # advise user
-            logging.warning("\n**** WARNING **** Generating new Cache Sigs file\n") 
-            if self.user_cache_file: # Handle User selectable Cache File
-                cache_location = self.user_cache_file
-            else: 
-                cache_location = DEFAULT_CACHE_FILE
-            
-            self.signCacheFile(cache_location) # Generate Cache
-        
-    def signCacheFile(self, cache_location):
-        sigsCacheFile = cache_location[:-4] + "sigs" # .json file renaming to .sigs file
-        
-        with open(sigsCacheFile,'w') as sigs_file: 
-            h = self.dohash_sha256(cache_location) # requires file name as input
-            
-            timestamp = datetime.now()
-            sigs_dict = { 'cachefile_hash' : h,
-                          'filename': cache_location,
-                          'last_generated_by_user' : getpass.getuser(),
-                          'date': str(timestamp.strftime("%Y-%m-%d %H:%M"))
-                        }
-            
-            json.dump(sigs_dict,
-                      sigs_file,
-                      sort_keys=True,
-                      indent=4,
-                      separators=(',', ': '))
-        
-    def updateCacheFile(self, cache_dict):
-        if self.user_cache_file:
-            cache_location = self.user_cache_file
-        else: 
-            cache_location = DEFAULT_CACHE_FILE
-            
-        if os.path.isfile(cache_location):
-            with open(cache_location, 'w') as json_cachefile:
-                json.dump(cache_dict,
-                          json_cachefile,
-                          sort_keys=True,
-                          indent=4,
-                          separators=(',', ': '))
-            
-            self.signCacheFile(cache_location) # Sign Cache
-        
-        
+    # limitations: currently only supports bnk file with SHA1 contents        
     def dobnk(self, fname, blocksize):
-        self.LogOutput = []
-        
-        if self.useCacheFile.get() == 1: # Use Cache File
+        cache_file = None
+        if self.options_d['cache_file_f'] == True: # Use Cache File
             # Overwrite self.cache_dict with contents of file
-            self.cache_dict = self.importCacheFile() 
+            cache_file = CacheFile(self.user_cache_file) 
+            self.cache_dict = cache_file.cache_dict
 
         oh = "0000000000000000000000000000000000000000"
         # Verify Seed is a number String format, and atleast 2 digits long 
@@ -233,91 +260,110 @@ class epsig2():
             return -1
         else:
             try:
-                self.text_BNKoutput.insert(END, "\nProcessing: " + fname + "\n")
-                # infile = open(self.mandir + "/" + self.bnk_filename, 'r')
-                infile = open(fname, 'r')
-                fdname = ['fname', 'type', 'blah']
-                reader = csv.DictReader(infile, delimiter=' ', fieldnames = fdname)
+                self.output.append("\nProcessing: " + fname)
 
-                self.text_BNKoutput.insert(END, "%-50s\tSEED\n" % (self.format_output(self.seed)))
-            
-                for row in reader:
-                    if row['type'].upper() == 'SHA1':
-                        # check if the file exists
-                        if (os.path.isfile(self.mandir + "/" + row['fname'])):
+                with open(fname, 'r') as infile: 
+                # infile = open(fname, 'r')
+                    fdname = ['fname', 'type', 'blah']
+                    reader = csv.DictReader(infile, delimiter=' ', fieldnames = fdname)
 
-                            # The following should return a list    
-                            cachedhit = self.checkCacheFilename(self.mandir + "/" + 
-                                str(row['fname']), self.seed, row['type'].upper())
+                    self.output.append("%-50s\tSEED" % (self.format_output(self.seed, self.options_d)))
+                
+                    for row in reader:
+                        if row['type'].upper() == 'SHA1':
+                            # check if the file exists
+                            if (os.path.isfile(self.mandir + "/" + row['fname'])):
 
-                            if cachedhit:
-                                localhash = cachedhit
-                            else: 
-                                new_cache_list = list()
-                                localhash = self.dohash_hmacsha1(self.mandir + "/" + 
-                                    str(row['fname']), blocksize)
-
-                                seed_info = { 
-                                    'seed': self.seed, 
-                                    'alg': row['type'].upper(), 
-                                    'verify':'0', 
-                                    'hash': localhash 
-                                }        
+                                # The following should return a list    
+    #                            cachedhit = self.checkCacheFilename(self.mandir + "/" + 
+    #                                str(row['fname']), self.seed, row['type'].upper())
                                 
-                                cache_entry_list = self.cache_dict.get(self.mandir + "/" + 
-                                    str(row['fname'])) # Should return a list. 
-                                
-                                if cache_entry_list : # File Entry Exists, append to list
-                                    cache_entry_list.append(seed_info) # print this
-                                    self.cache_dict[self.mandir + "/" 
-                                        + str(row['fname'])] = cache_entry_list # keep unique
-                                else:  # No File Entry Exits generate new list entry in cache_dict
-                                    new_cache_list.append(seed_info)
-                                    self.cache_dict[self.mandir + "/" + 
-                                        str(row['fname'])] = new_cache_list # keep unique
-                                
-                                if self.useCacheFile.get() == 1:
-                                    self.updateCacheFile(self.cache_dict) # Update file cache
+                                cachedhit = None
+                                with concurrent.futures.ThreadPoolExecutor() as executor:
+                                    future = executor.submit(self.checkCacheFilename, self.mandir + "/" + str(row['fname']), 
+                                        self.seed, row['type'].upper())
+                                    cachedhit = future.result()
+
+                                localhash = None
+                                if cachedhit:
+                                    localhash = cachedhit
                                 else: 
-                                    self.cache_dict[self.mandir + "/" + 
-                                        str(row['fname'])] = new_cache_list # update local cache
+                                    new_cache_list = list()
+
+                                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                                        dohash = executor.submit(self.dohash_hmacsha1, self.mandir + "/" + str(row['fname']), 
+                                            blocksize)
+                                        localhash = dohash.result() # get hashresult
+
+                                    #localhash = self.dohash_hmacsha1(self.mandir + "/" + 
+                                    #    str(row['fname']), blocksize)
+
+                                    seed_info = { 
+                                        'seed': self.seed, 
+                                        'alg': row['type'].upper(), 
+                                        'verify':'0', 
+                                        'hash': localhash 
+                                    }        
                                     
-                            # Append Object to Log object
-                            self.LogOutput.append({'filename': str(row['fname']), 
-                                'filepath': self.mandir + "/" , 
-                                'seed' : self.seed, 
-                                'alg': row['type'].upper(), 
-                                'hash': localhash })
+                                    cache_entry_list = self.cache_dict.get(self.mandir + "/" + 
+                                        str(row['fname'])) # Should return a list. 
+                                    
+                                    if cache_entry_list : # File Entry Exists, append to list
+                                        cache_entry_list.append(seed_info) # print this
+                                        self.cache_dict[self.mandir + "/" 
+                                            + str(row['fname'])] = cache_entry_list # keep unique
+                                    else:  # No File Entry Exits generate new list entry in cache_dict
+                                        new_cache_list.append(seed_info)
+                                        self.cache_dict[self.mandir + "/" + 
+                                            str(row['fname'])] = new_cache_list # keep unique
+                                    
+                                    # if self.useCacheFile.get() == 1:
+                                    if self.options_d['cache_file_f'] == True:
+                                        # self.updateCacheFile(self.cache_dict) # Update file cache
+                                        cache_file.updateCacheFile(self.cache_dict) # Update file cache
+                                    else: 
+                                        self.cache_dict[self.mandir + "/" + 
+                                            str(row['fname'])] = new_cache_list # update local cache
+                                        
+                                # Append Object to Log object
+                                self.LogOutput.append({'filename': str(row['fname']), 
+                                    'filepath': self.mandir + "/" , 
+                                    'seed' : self.seed, 
+                                    'alg': row['type'].upper(), 
+                                    'hash': localhash })
 
-                            # handle incorrect seed length
-                            if localhash == 0:
-                                break # exit out cleanly
+                                # handle incorrect seed length
+                                if localhash == 0:
+                                    break # exit out cleanly
 
-                            self.resulthash = self.format_output(str(localhash))
-                            
-                            oh = hex(int(oh,16) ^ int(str(localhash), 16)) # XOR'ed result
-                            
-                            if cachedhit:
-                                print("%-50s\t%-s\t%-10s" % (self.format_output(str(localhash)), 
-                                    str(row['fname']), "(cached)"))# Hash and Filename
-                            else:
-                                print("%-50s\t%-s" % (self.format_output(str(localhash)), str(row['fname'])))# Hash and Filename
-                            
-                            self.text_BNKoutput.insert(END, "%-50s\t%s\n" % (self.format_output(str(localhash)), str(row['fname'])))
-                            
+                                self.resulthash = self.format_output(str(localhash), self.options_d)
+                                
+                                oh = hex(int(oh,16) ^ int(str(localhash), 16)) # XOR'ed result
+                                
+                                outputstr = None
+                                if cachedhit:
+                                    outputstr = "%-50s\t%-s\t%-10s" % (self.format_output(str(localhash), 
+                                        self.options_d), str(row['fname']), "(cached)")
+                                else:
+                                    outputstr = "%-50s\t%-s" % (self.format_output(str(localhash), self.options_d), str(row['fname']))
+                                
+                                logging.debug(outputstr)
+                                self.output.append(outputstr)
+                                
+                            else: 
+                                error_text =  "\n!!!!!!!!!!!!!! ERROR: Could not read file: " + str(row['fname']) + " in: " + fname + "\n\n"
+                                logging.error("Could not read file: " + str(row['fname']) + " in: " + fname)
+                                self.output.append(error_text)
                         else: 
-                            logging.error("Could not read file: " + str(row['fname']) + " in: " + fname)
-                            self.text_BNKoutput.insert(END, "\n!!!!!!!!!!!!!! ERROR: Could not read file: " + str(row['fname']) + " in: " + fname + "\n\n")
-                    else: 
-                        messagebox.showerror("Not Yet Implemented!", "Unsupported hash algorithm: " + row['type'].upper() + ".\n\nExiting. Sorry!")
-                        logging.error('Unsupported hash algorithm: ' + row['type'])
-                        # Need to implement CR16, CR32, PS32, PS16, OA4F and OA4R, and SHA256 if need be. 
+                            messagebox.showerror("Not Yet Implemented!", "Unsupported hash algorithm: " + row['type'].upper() + ".\n\nExiting. Sorry!")
+                            logging.error('Unsupported hash algorithm: ' + row['type'])
+                            # Need to implement CR16, CR32, PS32, PS16, OA4F and OA4R, and SHA256 if need be. 
 
-            except csv.Error() as e:
-                messagebox.showerror("CSV Parsing Error", "Malformed BNK entry, check the file manually" + row['type'].upper() + ".\n\nExiting.")
-                sys.exit('file %s, line %d: %s' % (filename, reader.line_num, e))
+#            except csv.Error() as e:
+#                messagebox.showerror("CSV Parsing Error", "Malformed BNK entry, check the file manually" + row['type'].upper() + ".\n\nExiting.")
+#                sys.exit('file %s, line %d: %s' % (filename, reader.line_num, e))
             except KeyboardInterrupt:
-                logging.DEBUG("Keyboard interrupt during processing of files. Exiting")
+                logging.debug("Keyboard interrupt during processing of files. Exiting")
                 sys.exit(1)
             
         return oh
@@ -326,28 +372,35 @@ class epsig2():
     def insert_spaces(self, text, s_range):
         return " ".join(text[i:i+s_range] for i in range(0, len(text), s_range))
 
-    def format_output(self, inputstr, myflag=False):
+    def format_output(self, inputstr, options_d):
         outputstr = ''
-        
+
         # include a space for every eight chars
-        if (self.eightchar.get() == 1):
-            outputstr = self.insert_spaces(inputstr, 8)
+        if (options_d['eightchar'] == True):
+            s_range = 8
+            outputstr = " ".join(inputstr[i:i+s_range] for i in range(0, len(inputstr), s_range)) # self.insert_spaces(inputstr, 8)
         else: 
             outputstr = inputstr
         
         # uppercase
-        if self.uppercase.get() == 1: 
+        if options_d['uppercase'] == True: 
             outputstr = outputstr.upper()
         
         # QCAS expected result
-        if myflag:
-            if (self.reverse.get() == 1):
-                outputstr = self.getQCAS_Expected_output(outputstr)
+        if options_d['reverse'] == True:
+            outputstr = self.getQCAS_Expected_output(outputstr)
         
         return outputstr
 
     def processfile(self, fname, chunks):
-        h = self.dobnk(fname, chunks)
+        time.sleep(1) 
+        h = None 
+
+        # h = self.dobnk(fname, chunks)
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future = executor.submit(self.dobnk, fname, chunks)
+            h = future.result()        
+
         outstr = ''
         tmpStr = ''
         
@@ -359,7 +412,10 @@ class epsig2():
         if h == -1: 
             return # handle error in seed input
         else:
-            self.text_BNKoutput.insert(END, "%-50s\t%s\n" % (str(h).zfill(40), "RAW output"))
+            # self.text_BNKoutput.insert(END, "%-50s\t%s\n" % (str(h).zfill(40), "RAW output"))
+            raw_outputstr = "%-50s\t%s" % (str(h).zfill(40), "RAW output")
+            logging.debug(raw_outputstr)
+            self.output.append(raw_outputstr)
 
             #strip 0x first
             tmpStr = str(h).lstrip('0X').zfill(40) # forces 40 characters with starting 0 characters. 
@@ -369,20 +425,16 @@ class epsig2():
             #self.text_BNKoutput.tag_add("alltext", END, len())
             #self.text_BNKoutput.tag_config("alltext", background="yellow", foreground="red")
             
-            # Display XOR Result    
-            if self.reverse.get() == 1:
-                self.text_BNKoutput.insert(END, "%-50s\tQCAS Expected Formatted Result\n" % (self.format_output(tmpStr, True)))
-            else: 
-                self.text_BNKoutput.insert(END, "%-50s\tXOR Formatted Result\n" % (self.format_output(tmpStr)))
-            print("%-50s\tXOR Result" % (self.format_output(tmpStr) ))
+            self.xor_result = self.format_output(tmpStr, self.options_d) # save result
+            outputstr = "%-50s\t%s" % (str(self.xor_result), "XOR Formatted Result")
+            self.output.append(outputstr)
 
-        return(self.format_output(tmpStr))            
-
-    def writetoLogfile(self, filename, xor_result, bnkfile):
+    def writetoLogfile(self, filename, xor_result, bnkfile, multi_logf):
         timestamp = datetime.timestamp(datetime.now())
         outputfile = ''
         
-        if self.logtimestamp.get() == 1: # Multi log files not overwritten saved in different directory
+        #if self.logtimestamp.get() == 1: # Multi log files not overwritten saved in different directory
+        if multi_logf == True: 
             outputfile = "epsig2-logs/" + filename[:-4] + "-" + str(timestamp) + ".log"
         else: # Single log file that's overwritten
             outputfile = filename
@@ -392,23 +444,47 @@ class epsig2():
                 str(datetime.fromtimestamp(timestamp)) + " --------------------------\n")
             outfile.writelines("Processsed: " + bnkfile + "\n")
             # outfile.writelines("%40s \t %40s \t %60s\n" % ("SEED", "HASH", "FILENAME"))
+            my_seed = ''
+            outfile.writelines("%-40s \t %-40s \t %-60s\n" % ("Seed", "Hash", "Filename"))
             for item in self.LogOutput:
-                outfile.writelines("%40s \t %40s \t %-60s\n" % (self.format_output(str(item['seed'])), 
-                    self.format_output(str(item['hash'])), item['filename']))
+                outfile.writelines("%40s \t %40s \t %-60s\n" % (self.format_output(str(item['seed']), self.options_d), 
+                    self.format_output(str(item['hash']), self.options_d), item['filename']))
+                my_seed = str(item['seed'])
 
-            outfile.writelines("%40s \t %40s \t XOR\n" % (self.format_output(str(item['seed'])), 
-                self.format_output(xor_result.replace(" ", ""))))
-           
+            outfile.writelines("%40s \t %40s \t XOR\n" % (self.format_output(my_seed, self.options_d), 
+                self.format_output(xor_result.replace(" ", ""), self.options_d)))
 
     def getQCAS_Expected_output(self, text):
         tmpstr = text[:8] # Returns from the beginning to position 8 of uppercase text
         return "".join(reversed([tmpstr[i:i+2] for i in range(0, len(tmpstr), 2)]))
 
+
+class epsig2_gui():
+
+    # Constructor
+    def __init__(self):
+        logging.basicConfig(level=logging.DEBUG, format=' %(asctime)s - %(levelname)s- %(message)s')
+        logging.debug('Start of epsig2_gui')
+        
+        self.bnk_filename = ''
+        self.bnk_filepath = ''
+        self.seed_filepath = ''
+        self.bnk_filename_list = list()
+        self.bnk_filelist = list()
+        self.seed = ''
+        self.user_cache_file = None
+        self.cache_dict = {} # Clear cache_dict
+        self.root = Tk()
+
+        self.processes = list() 
+
+        # Threaded GUI
+        t = Thread(group=None, target=self.setupGUI(), daemon=True) 
+        t.start()  
+
+
     def getClubsQSIM_Expected_output(self, text): # Returns flipped bits of full length HMACSHA1 (60 Chars? )
         return "".join(reversed([text[i:i+2] for i in range(0, len(text), 2)]))
-    
-    def processdirectory(self):
-        print("Arg 1 is a path")
 
     def handleButtonPress(self, myButtonPress):
         
@@ -439,23 +515,62 @@ class epsig2():
                         self.mandir = os.path.dirname(bnk_filepath)
 
                         if (self.reverse.get() == 1): # reverse the seed.
-                            self.seed = self.getQCAS_Expected_output(self.combobox_SelectSeed.get())
+                            self.seed = epsig2.getQCAS_Expected_output(self, self.combobox_SelectSeed.get())
                         else: 
                             self.seed = self.combobox_SelectSeed.get()
 
                         if (self.clubs_expected_output.get() == 1):
-                            message = "\nQSIM reversed seed to use: " + self.getClubsQSIM_Expected_output(self.combobox_SelectSeed.get())
-                            logging.info(message)
+                            message = "\nQSIM reversed seed to use: " + self.getClubsQSIM_Expected_output(self.combobox_SelectSeed.get()) + "\n"
+                            logging.debug(message)
                             self.text_BNKoutput.insert(END, message)
 
-                        logging.info("Seed is: " + self.seed)
-                        xor_result = self.processfile(bnk_filepath, MAXIMUM_BLOCKSIZE_TO_READ)
+                        logging.debug("Seed is: " + self.seed)
+
+                        # create process for hashing a file 
+
+                        options_d = dict() 
+                        options_d['cache_file_f'] = self.useCacheFile.get() == 1
+                        options_d['uppercase'] = self.uppercase.get() == 1
+                        options_d['eightchar'] = self.eightchar.get() == 1
+                        options_d['reverse'] = self.reverse.get() == 1
+                        options_d['usr_cache_file'] = self.CacheFileButtonText.get()
+
+                        my_p = epsig2(self.seed, bnk_filepath, options_d, self.cache_dict) 
+                        #threading.Thread(group=None, target=my_p.processfile(bnk_filepath, MAXIMUM_BLOCKSIZE_TO_READ)).start() 
+
+                        # Create and launch a thread 
+                        t = Thread(group=None, target=my_p.processfile, args=(bnk_filepath, MAXIMUM_BLOCKSIZE_TO_READ, )) 
+                        t.start()  
+
+                        self.processes.append(t)
+
+                        # xor_result = self.processfile(bnk_filepath, MAXIMUM_BLOCKSIZE_TO_READ)
+                    else: 
+                        logging.warning(bnk_filepath + " does not exist")
+
+                for t in self.processes: 
+                    t.join() # wait for all threads to complete
 
                     # option to write to log selected.
                     if self.writetolog.get() == 1:  
-                        self.writetoLogfile(EPSIG_LOGFILE, xor_result, bnk_filepath)
+                        my_p.writetoLogfile(EPSIG_LOGFILE, my_p.xor_result, bnk_filepath, self.logtimestamp.get() == 1)
+
+                    # update gui
+                    for entry in my_p.output:
+                        self.text_BNKoutput.insert(END, entry+"\n")
+
+                    xor_result_output_str = '' 
+
+                    if self.reverse.get() == 1: 
+                        xor_result_output_str = "%-50s\tQCAS Expected Formatted Result\n" % (my_p.xor_result)
+                    else: 
+                        xor_result_output_str = "%-50s\tXOR Formatted Result\n" % (my_p.xor_result)
+                    
+                    # self.text_BNKoutput.insert(END, xor_result_output_str)
+                    logging.info("Processed: " + bnk_filepath + "\t" + xor_result_output_str)
             else:
                 messagebox.showerror("BNK files not selected.", "Please select files first")
+                logging.debug(str(len(self.bnk_filelist)))
         
         elif myButtonPress == '__clear_output__':
                 self.text_BNKoutput.delete(1.0, END)
@@ -484,6 +599,7 @@ class epsig2():
                 self.useCacheFile.set(0)
                 self.CacheFileButtonText.set(DEFAULT_CACHE_FILE)
                 self.user_cache_file = None
+                self.processes = list()
                 
         elif myButtonPress == '__clear_cache__':
                 if self.user_cache_file:
@@ -493,17 +609,24 @@ class epsig2():
                     
                 logging.info("\nCleared local RAM cache only. \nFile cache not modified: " + cache_location)
                 if self.useCacheFile.get() == 1: # Use Cache File
-                    self.importCacheFile() # Overwrite self.cache_dict with contents of file
+                    cache_file = CacheFile(self.user_cache_file) # read cache file
+                    self.cache_dict = cache_file.cache_dict # Overwrite self.cache_dict with contents of file
                 else:
                     self.cache_dict = {} # empty_cache_data # Clear cache_dict
 
+                self.processes = list()
+
+
         elif myButtonPress == '__print_cache__':
-                print("\nCache Entries: ")
+                self.text_BNKoutput.insert(END, "\nCache Entries: ")
                 if self.useCacheFile.get() == 1: # Use Cache File
-                    self.cache_dict = self.importCacheFile() # Overwrite self.cache_dict with contents of file
-                    print(json.dumps(self.cache_dict, sort_keys=True, indent=4, separators=(',',':')))
-                else:
-                    print(json.dumps(self.cache_dict, sort_keys=True, indent=4, separators=(',',':')))
+                    cache_file = CacheFile(self.CacheFileButtonText.get())
+                    self.cache_dict = cache_file.cache_dict # Overwrite self.cache_dict with contents of file
+
+                message = json.dumps(self.cache_dict, sort_keys=True, indent=4, separators=(',',':'))                    
+                self.text_BNKoutput.insert(END, message + "\n")
+
+
         elif myButtonPress == '__select_cache_file__':
                 input_cachefile_dir = filedialog.askdirectory(initialdir='.', title='epsig2_cachefile.json')
                 self.CacheFileButtonText.set(os.path.join(input_cachefile_dir,"epsig2_cachefile_v2.json"))
@@ -736,12 +859,12 @@ class epsig2():
         button_clear_output.grid(row=1, column=2, sticky='w', padx=5, pady=5)
 
         # Start Button
-        button_start = ttk.Button(
+        self.button_start = ttk.Button(
             frame_controlbuttons, 
             text = "Generate Hash...",
             command = lambda: self.handleButtonPress('__start__'), 
             width = 16)
-        button_start.grid(row=1, column=3, sticky='w', padx=5, pady=5)
+        self.button_start.grid(row=1, column=3, sticky='w', padx=5, pady=5)
 
         ################ Bottom Cache FRAME ##############
         frame_cachebuttons = ttk.Frame(frame_bottombuttons)
@@ -792,37 +915,17 @@ class epsig2():
             self.button_clear_cache.config(state=not DISABLED)
 
         self.root.mainloop()
-
-    # Constructor
-    def __init__(self):
-        logging.basicConfig(level=logging.DEBUG, format=' %(asctime)s - %(levelname)s- %(message)s')
-        logging.debug('Start of epsig2_gui')
-        
-        self.bnk_filename = ''
-        self.bnk_filepath = ''
-        self.seed_filepath = ''
-        self.bnk_filename_list = list()
-        self.bnk_filelist = list()
-        self.seed = ''
-        self.user_cache_file = None
-        self.cache_dict = {} # Clear cache_dict
-        
-        self.root = Tk()
-
-        # GUI
-        threading.Thread(self.setupGUI()).start()
         
 
 def main():
     app = None
-    
+    logging.basicConfig(level=logging.DEBUG, format=' %(asctime)s - %(levelname)s- %(message)s')    
     try: 
-        app = epsig2()
+        app = epsig2_gui()
            
     except KeyboardInterrupt:       
         logging.debug("Program Exiting.")
         app.root.quit()
-
         sys.exit(0)
 
 if __name__ == "__main__": main()
