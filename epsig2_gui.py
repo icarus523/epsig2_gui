@@ -246,6 +246,7 @@ class epsig2():
 
     # limitations: currently only supports bnk file with SHA1 contents        
     def dobnk(self, fname, blocksize):
+        time.sleep(1)
         cache_file = None
         if self.options_d['cache_file_f'] == True: # Use Cache File
             # Overwrite self.cache_dict with contents of file
@@ -469,7 +470,6 @@ class epsig2_gui():
 
         self.processes = list() 
         Thread(self.setupGUI()).start()        
-
 
     def getClubsQSIM_Expected_output(self, text): # Returns flipped bits of full length HMACSHA1 (60 Chars? )
         return "".join(reversed([text[i:i+2] for i in range(0, len(text), 2)]))
