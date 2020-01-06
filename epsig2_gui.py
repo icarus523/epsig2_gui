@@ -62,6 +62,7 @@ import logging
 import threading
 import time 
 import concurrent.futures
+import atexit
 
 from tkinter import *
 from tkinter import messagebox
@@ -260,14 +261,14 @@ class epsig2():
             return -1
         else:
             try:
-                self.output.append("\nProcessing: " + fname)
+                logging.debug("Processing: " + fname +  "[" + str(threading.currentThread().getName()) + "]")
 
                 with open(fname, 'r') as infile: 
                 # infile = open(fname, 'r')
                     fdname = ['fname', 'type', 'blah']
                     reader = csv.DictReader(infile, delimiter=' ', fieldnames = fdname)
 
-                    self.output.append("%-50s\tSEED" % (self.format_output(self.seed, self.options_d)))
+                    logging.debug("%-50s\tSEED" % (self.format_output(self.seed, self.options_d)))
                 
                     for row in reader:
                         if row['type'].upper() == 'SHA1':
@@ -275,28 +276,15 @@ class epsig2():
                             if (os.path.isfile(self.mandir + "/" + row['fname'])):
 
                                 # The following should return a list    
-    #                            cachedhit = self.checkCacheFilename(self.mandir + "/" + 
-    #                                str(row['fname']), self.seed, row['type'].upper())
+                                cachedhit = self.checkCacheFilename(self.mandir + "/" + str(row['fname']), self.seed, row['type'].upper())
                                 
-                                cachedhit = None
-                                with concurrent.futures.ThreadPoolExecutor() as executor:
-                                    future = executor.submit(self.checkCacheFilename, self.mandir + "/" + str(row['fname']), 
-                                        self.seed, row['type'].upper())
-                                    cachedhit = future.result()
-
-                                localhash = None
                                 if cachedhit:
                                     localhash = cachedhit
                                 else: 
                                     new_cache_list = list()
 
-                                    with concurrent.futures.ThreadPoolExecutor() as executor:
-                                        dohash = executor.submit(self.dohash_hmacsha1, self.mandir + "/" + str(row['fname']), 
-                                            blocksize)
-                                        localhash = dohash.result() # get hashresult
-
-                                    #localhash = self.dohash_hmacsha1(self.mandir + "/" + 
-                                    #    str(row['fname']), blocksize)
+                                    localhash = self.dohash_hmacsha1(self.mandir + "/" + 
+                                        str(row['fname']), blocksize)
 
                                     seed_info = { 
                                         'seed': self.seed, 
@@ -345,28 +333,27 @@ class epsig2():
                                     outputstr = "%-50s\t%-s\t%-10s" % (self.format_output(str(localhash), 
                                         self.options_d), str(row['fname']), "(cached)")
                                 else:
-                                    outputstr = "%-50s\t%-s" % (self.format_output(str(localhash), self.options_d), str(row['fname']))
+                                    outputstr = "%-50s\t%-s" % (self.format_output(str(localhash), self.options_d), 
+                                        str(row['fname']))
                                 
-                                logging.debug(outputstr)
-                                self.output.append(outputstr)
+                                logging.debug(outputstr + "[" + str(threading.currentThread().getName()) + "]")
+                                # self.output.append(outputstr)
                                 
                             else: 
                                 error_text =  "\n!!!!!!!!!!!!!! ERROR: Could not read file: " + str(row['fname']) + " in: " + fname + "\n\n"
                                 logging.error("Could not read file: " + str(row['fname']) + " in: " + fname)
-                                self.output.append(error_text)
+                                # self.output.append(error_text)
                         else: 
                             messagebox.showerror("Not Yet Implemented!", "Unsupported hash algorithm: " + row['type'].upper() + ".\n\nExiting. Sorry!")
                             logging.error('Unsupported hash algorithm: ' + row['type'])
                             # Need to implement CR16, CR32, PS32, PS16, OA4F and OA4R, and SHA256 if need be. 
 
-#            except csv.Error() as e:
-#                messagebox.showerror("CSV Parsing Error", "Malformed BNK entry, check the file manually" + row['type'].upper() + ".\n\nExiting.")
-#                sys.exit('file %s, line %d: %s' % (filename, reader.line_num, e))
+
             except KeyboardInterrupt:
                 logging.debug("Keyboard interrupt during processing of files. Exiting")
                 sys.exit(1)
             
-        return oh
+        return { 'oh': oh, 'cache_dict' : self.cache_dict } 
     
     # Inserts spaces on [text] for every [s_range]
     def insert_spaces(self, text, s_range):
@@ -394,12 +381,15 @@ class epsig2():
 
     def processfile(self, fname, chunks):
         time.sleep(1) 
-        h = None 
+        h = None
 
-        # h = self.dobnk(fname, chunks)
-        with concurrent.futures.ThreadPoolExecutor() as executor:
+        #dobnk_output = self.dobnk(fname, chunks)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             future = executor.submit(self.dobnk, fname, chunks)
-            h = future.result()        
+            dobnk_output = future.result()        
+
+        h = dobnk_output['oh'] # output
+        self.cache_dict = dobnk_output['cache_dict'] # update
 
         outstr = ''
         tmpStr = ''
@@ -414,8 +404,8 @@ class epsig2():
         else:
             # self.text_BNKoutput.insert(END, "%-50s\t%s\n" % (str(h).zfill(40), "RAW output"))
             raw_outputstr = "%-50s\t%s" % (str(h).zfill(40), "RAW output")
-            logging.debug(raw_outputstr)
-            self.output.append(raw_outputstr)
+            logging.debug(raw_outputstr + "[" + str(threading.currentThread().getName()) + "]")
+            # self.output.append(raw_outputstr)
 
             #strip 0x first
             tmpStr = str(h).lstrip('0X').zfill(40) # forces 40 characters with starting 0 characters. 
@@ -427,7 +417,8 @@ class epsig2():
             
             self.xor_result = self.format_output(tmpStr, self.options_d) # save result
             outputstr = "%-50s\t%s" % (str(self.xor_result), "XOR Formatted Result")
-            self.output.append(outputstr)
+            # self.output.append(outputstr)
+            logging.debug(outputstr + "[" + str(threading.currentThread().getName()) + "]")
 
     def writetoLogfile(self, filename, xor_result, bnkfile, multi_logf):
         timestamp = datetime.timestamp(datetime.now())
@@ -477,10 +468,7 @@ class epsig2_gui():
         self.root = Tk()
 
         self.processes = list() 
-
-        # Threaded GUI
-        t = Thread(group=None, target=self.setupGUI(), daemon=True) 
-        t.start()  
+        Thread(self.setupGUI()).start()        
 
 
     def getClubsQSIM_Expected_output(self, text): # Returns flipped bits of full length HMACSHA1 (60 Chars? )
@@ -509,8 +497,8 @@ class epsig2_gui():
                 for bnk_filepath in self.bnk_filelist:
                     logging.debug("Processing: " + bnk_filepath)
                     if (os.path.isfile(bnk_filepath)):                 
-                        if self.bnk_filename == '': 
-                            self.bnk_filename = os.path.basename(bnk_filepath)
+                        #if self.bnk_filename == '': 
+                        self.bnk_filename = os.path.basename(bnk_filepath)
                         
                         self.mandir = os.path.dirname(bnk_filepath)
 
@@ -539,35 +527,41 @@ class epsig2_gui():
                         #threading.Thread(group=None, target=my_p.processfile(bnk_filepath, MAXIMUM_BLOCKSIZE_TO_READ)).start() 
 
                         # Create and launch a thread 
-                        t = Thread(group=None, target=my_p.processfile, args=(bnk_filepath, MAXIMUM_BLOCKSIZE_TO_READ, )) 
-                        t.start()  
-
-                        self.processes.append(t)
+                        t = Thread(group=None, target=my_p.processfile, name=self.bnk_filename, args=(bnk_filepath, MAXIMUM_BLOCKSIZE_TO_READ, )) 
+                        t.start()
 
                         # xor_result = self.processfile(bnk_filepath, MAXIMUM_BLOCKSIZE_TO_READ)
                     else: 
                         logging.warning(bnk_filepath + " does not exist")
 
-                for t in self.processes: 
-                    t.join() # wait for all threads to complete
+                main_thread = threading.currentThread()
+                for t in threading.enumerate(): 
+                    if t is main_thread:
+                        continue
+                    logging.debug('joining %s', t.getName())
+                    t.join()
+
+                #for t in self.processes: 
+                #    t.join() # wait for all threads to complete
 
                     # option to write to log selected.
-                    if self.writetolog.get() == 1:  
-                        my_p.writetoLogfile(EPSIG_LOGFILE, my_p.xor_result, bnk_filepath, self.logtimestamp.get() == 1)
+                #    if self.writetolog.get() == 1:  
+                #        my_p.writetoLogfile(EPSIG_LOGFILE, my_p.xor_result, bnk_filepath, self.logtimestamp.get() == 1)
 
                     # update gui
-                    for entry in my_p.output:
-                        self.text_BNKoutput.insert(END, entry+"\n")
+                #    for entry in my_p.output:
+                #        self.text_BNKoutput.insert(END, entry+"\n")
 
-                    xor_result_output_str = '' 
+                #   xor_result_output_str = '' 
 
-                    if self.reverse.get() == 1: 
-                        xor_result_output_str = "%-50s\tQCAS Expected Formatted Result\n" % (my_p.xor_result)
-                    else: 
-                        xor_result_output_str = "%-50s\tXOR Formatted Result\n" % (my_p.xor_result)
+                #    if self.reverse.get() == 1: 
+                #        xor_result_output_str = "%-50s\tQCAS Expected Formatted Result\n" % (my_p.xor_result)
+                #    else: 
+                #        xor_result_output_str = "%-50s\tXOR Formatted Result\n" % (my_p.xor_result)
                     
                     # self.text_BNKoutput.insert(END, xor_result_output_str)
-                    logging.info("Processed: " + bnk_filepath + "\t" + xor_result_output_str)
+                #    logging.info("Processed: " + bnk_filepath + "\t" + xor_result_output_str)
+
             else:
                 messagebox.showerror("BNK files not selected.", "Please select files first")
                 logging.debug(str(len(self.bnk_filelist)))
@@ -916,13 +910,17 @@ class epsig2_gui():
 
         self.root.mainloop()
         
-
+def exit_handler():
+    logging.getLogger().info("==== epsig2_gui STOPPED/INTERRUPTED: " + str(datetime.now()) + " by: " + getpass.getuser()  + " ====")
+ 
 def main():
     app = None
     logging.basicConfig(level=logging.DEBUG, format=' %(asctime)s - %(levelname)s- %(message)s')    
+    atexit.register(exit_handler)
+    
     try: 
         app = epsig2_gui()
-           
+
     except KeyboardInterrupt:       
         logging.debug("Program Exiting.")
         app.root.quit()
