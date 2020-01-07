@@ -379,7 +379,7 @@ class epsig2():
         
         # QCAS expected result
         if options_d['reverse'] == True:
-            outputstr = self.getQCAS_Expected_output(outputstr)
+            outputstr = epsig2.getQCAS_Expected_output(self, outputstr)
         
         return outputstr
 
@@ -765,7 +765,7 @@ class epsig2_gui():
         frame_textarea.config(relief = RIDGE, borderwidth = 2)
 
         # Text Area output of BNK file generation
-        self.text_BNKoutput = Text(frame_textarea, height=30)
+        self.text_BNKoutput = Text(frame_textarea, height=30, width=130)
         myscrollbar = Scrollbar(frame_textarea, command=self.text_BNKoutput.yview)
         myscrollbar.pack(side=RIGHT, fill=Y)
         self.text_BNKoutput.configure(yscrollcommand=myscrollbar.set)
