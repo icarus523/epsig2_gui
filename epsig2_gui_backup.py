@@ -112,7 +112,7 @@ class CacheFile():
             else: 
                 logging.warning("**** WARNING **** File Cache integrity issue: " +
                         " Cannot Verify signature")
-                logging.info("Generating new File Cache file: " + cache_location)
+                logging.info("Generating new File Cache file:" + cache_location)
                 cache_data = {} # return empty cache
         else:
             logging.info(cache_location + 
@@ -141,7 +141,7 @@ class CacheFile():
                     return False     
         else: 
             # advise user
-            logging.warning("**** WARNING **** Generating new Cache Sigs file") 
+            logging.warning("\n**** WARNING **** Generating new Cache Sigs file\n") 
             if self.user_cache_file: # Handle User selectable Cache File
                 cache_location = self.user_cache_file
             else: 
@@ -196,11 +196,9 @@ class epsig2():
         self.cache_dict = cache_dict
         self.xor_result = ''
         self.LogOutput = list() 
-        # self.output = list() 
+        self.output = list() 
         self.user_cache_file = options_d['usr_cache_file']
         self.selectedHashtype = hash_type_str
-
-        self.processfile(self.filepath, chunks=8192) 
 
     def checkCacheFilename(self, filename, seed_input, alg_input): # alg_input 
         # For filename_seed, concatenate to form unique string. 
@@ -256,13 +254,14 @@ class epsig2():
             while True:
                 block = f.read(chunksize)
                 done += chunksize
-                # sys.stdout.write("%7d"%(done*100/size) + "%" + p_reset)
+                sys.stdout.write("%7d"%(done*100/size) + "%" + p_reset)
                 if not block: break
                 m.update(block)      
         return m.hexdigest()
     
     def checkhexchars(self, text):
         return (all(c in string.hexdigits for c in text))            
+
 
     def dobin(self, fname, blocksize):
         time.sleep(1)
@@ -285,7 +284,6 @@ class epsig2():
                 if (os.path.isfile(fname)):
                     # The following should return a list    
                     cachedhit = self.checkCacheFilename(fname, self.seed, hash_type)
-                    # logging.debug("%-50s\tSEED" % (self.format_output(self.seed, self.options_d)))
                     
                     if cachedhit:
                         localhash = cachedhit
@@ -322,8 +320,10 @@ class epsig2():
                         'seed' : self.seed, 
                         'alg': hash_type, 
                         'hash': localhash})
+
+                    self.resulthash = self.format_output(str(localhash), self.options_d)
                     
-                    oh = hex(int(oh,16) ^ int(str(localhash), 16)) # XOR result
+                    oh = hex(int(oh,16) ^ int(str(localhash), 16)) # XOR'ed result
                     
                     if cachedhit:
                         outputstr = "%-50s\t%-s\t%-10s" % (self.format_output(str(localhash), 
@@ -341,7 +341,7 @@ class epsig2():
                 logging.debug("Keyboard interrupt during processing of files. Exiting")
                 sys.exit(1)
 
-        return oh # { 'oh': oh, 'cache_dict' : self.cache_dict, 'rv': self.LogOutput ,'filename' : fname} 
+        return { 'oh': oh, 'cache_dict' : self.cache_dict, 'rv': self.LogOutput ,'filename' : fname} 
 
 
     # limitations: currently only supports bnk file with SHA1 contents        
@@ -368,10 +368,11 @@ class epsig2():
                 logging.debug("Processing: " + fname +  "\t[" + str(threading.currentThread().getName()) + "]")
 
                 with open(fname, 'r') as infile: 
+                # infile = open(fname, 'r')
                     fdname = ['fname', 'type', 'blah']
                     reader = csv.DictReader(infile, delimiter=' ', fieldnames = fdname)
 
-                    # logging.debug("%-50s\tSEED" % (self.format_output(self.seed, self.options_d)))
+                    logging.debug("%-50s\tSEED" % (self.format_output(self.seed, self.options_d)))
 
                     for row in reader:
                         if row['type'].upper() == 'SHA1':
@@ -392,6 +393,7 @@ class epsig2():
                                     seed_info = { 
                                         'seed': self.seed, 
                                         'alg': row['type'].upper(), 
+                                        # 'verify':'0', 
                                         'hash': localhash 
                                     }        
                                     
@@ -425,6 +427,8 @@ class epsig2():
                                 # handle incorrect seed length
                                 if localhash == 0:
                                     break # exit out cleanly
+
+                                self.resulthash = self.format_output(str(localhash), self.options_d)
                                 
                                 oh = hex(int(oh,16) ^ int(str(localhash), 16)) # XOR'ed result
                                 
@@ -441,42 +445,32 @@ class epsig2():
                             else: 
                                 error_text =  "\n!!!!!!!!!!!!!! ERROR: Could not read file: " + str(row['fname']) + " in: " + fname + "\n\n"
                                 logging.error("Could not read file: " + str(row['fname']) + " in: " + fname)
-                                return -1
                                 # self.output.append(error_text)
                         else: 
                             messagebox.showerror("Not Yet Implemented!", "Unsupported hash algorithm: " + row['type'].upper() + ".\n\nExiting. Sorry!")
                             logging.error('Unsupported hash algorithm: ' + row['type'])
-                            return -1
                             # Need to implement CR16, CR32, PS32, PS16, OA4F and OA4R, and SHA256 if need be. 
 
 
             except KeyboardInterrupt:
                 logging.debug("Keyboard interrupt during processing of files. Exiting")
-                #sys.exit(1)
-                return -1
+                sys.exit(1)
             
-        return oh # { 'oh': oh } , 'cache_dict' : self.cache_dict, 'rv': self.LogOutput ,'filename' : fname} 
+        return { 'oh': oh, 'cache_dict' : self.cache_dict, 'rv': self.LogOutput ,'filename' : fname} 
     
     # Inserts spaces on [text] for every [s_range]
     def insert_spaces(self, text, s_range):
         return " ".join(text[i:i+s_range] for i in range(0, len(text), s_range))
 
-    # Formats inputstr based on options_d dictionary
     def format_output(self, inputstr, options_d):
         outputstr = ''
-
-        if self.selectedHashtype == 'HMAC-SHA1': 
-            outputstr = inputstr.lstrip('0X').lstrip('0x').zfill(40) #strip 0x first
-        elif self.selectedHashtype == 'HMAC-SHA256': 
-            outputstr = inputstr.lstrip('0X').lstrip('0x').zfill(64) #strip 0x first
-        else: 
-            # logging.error("Unknown hash type: ", self.selectedHashtype,  str(type(self.selectedHashtype)))
-            outputstr = inputstr.lstrip('0X').lstrip('0x').zfill(64) #strip 0x first
 
         # include a space for every eight chars
         if (options_d['eightchar'] == True):
             s_range = 8
-            outputstr = " ".join(outputstr[i:i+s_range] for i in range(0, len(outputstr), s_range)) # self.insert_spaces(inputstr, 8)
+            outputstr = " ".join(inputstr[i:i+s_range] for i in range(0, len(inputstr), s_range)) # self.insert_spaces(inputstr, 8)
+        else: 
+            outputstr = inputstr
         
         # uppercase
         if options_d['uppercase'] == True: 
@@ -488,20 +482,19 @@ class epsig2():
         
         return outputstr
 
-    def getQCAS_Expected_output(self, text):
-        tmpstr = text[:8] # Returns from the beginning to position 8 of uppercase text
-        return "".join(reversed([tmpstr[i:i+2] for i in range(0, len(tmpstr), 2)]))
-
     def processfile(self, fname, chunks):
         time.sleep(1) 
         h = None
         do_output = None
         #dobnk_output = self.dobnk(fname, chunks)
-        
-        if fname.upper().endswith(".BNK"): 
-            h = self.dobnk(fname, chunks)
+        if fname.upper().endswith(".BNK"): # and self.mode == 'BNK': 
+            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                future = executor.submit(self.dobnk, fname, chunks)
+                do_output = future.result()        
+                h = do_output['oh'] # output
         elif fname.upper().endswith(".BIN"): #  and self.mode == 'BIN': 
-            h = self.dobin(fname, chunks)
+                do_output = self.dobin(fname, chunks)    
+                h = do_output['oh'] # output
         else: 
             logging.error("unknown file type selected: " + fname)
             messagebox.showerror("Invalid files selected", "Please select Mode and BNK/BIN files.")
@@ -512,25 +505,37 @@ class epsig2():
         outstr = ''
         tmpStr = ''
         
+        # display to screen
+        #for item in self.LogOutput:
+        #    logging.debug("\n" + json.dumps(item, sort_keys=True, indent=4, separators=(',', ': ')))
+
         if h == -1: 
             return # handle error in seed input
         else:
             # self.text_BNKoutput.insert(END, "%-50s\t%s\n" % (str(h).zfill(40), "RAW output"))
-            # raw_outputstr = "%-50s\t%s" % (str(h).zfill(40), "RAW output")
-            # logging.debug(raw_outputstr + "\t[" + str(threading.currentThread().getName()) + "]")
+            raw_outputstr = "%-50s\t%s" % (str(h).zfill(40), "RAW output")
+            logging.debug(raw_outputstr + "\t[" + str(threading.currentThread().getName()) + "]")
             # self.output.append(raw_outputstr)
 
-            #### 
-            # processfile must occur before any reads to self.xor_result!!  
-            self.xor_result = self.format_output(str(h), self.options_d) # save result
-            #### 
-
+            #strip 0x first
+            tmpStr = str(h).lstrip('0X').zfill(40) # forces 40 characters with stating 0 characters. 
+            tmpStr = str(h).lstrip('0x').zfill(40)
+           
+            self.xor_result = self.format_output(tmpStr, self.options_d) # save result
             outputstr = "%-50s" % (str(self.xor_result))
+            # self.output.append(outputstr)
             if fname.upper().endswith(".BNK"): 
-                logging.debug(outputstr + "\tXOR Formatted Result" + "\t[" + str(threading.currentThread().getName()) + "]")
-            else: 
-                logging.debug(outputstr + "\tFormatted Result" + "\t[" + str(threading.currentThread().getName()) + "]")
+                logging.debug(outputstr + "XOR Formatted Result" + "\t[" + str(threading.currentThread().getName()) + "]")
+            #else: 
+            #    logging.debug(outputstr + "Formatted Result" + "\t[" + str(threading.currentThread().getName()) + "]")
 
+            do_output['oh'] = self.xor_result #overwrite              
+
+        return do_output
+
+    def getQCAS_Expected_output(self, text):
+        tmpstr = text[:8] # Returns from the beginning to position 8 of uppercase text
+        return "".join(reversed([tmpstr[i:i+2] for i in range(0, len(tmpstr), 2)]))
 
 
 class epsig2_gui():
@@ -550,7 +555,9 @@ class epsig2_gui():
         self.cache_dict = {} # Clear cache_dict
         self.root = Tk()
         self.selectedHashtype = StringVar() 
+        #self.mode='BNK'
 
+        self.processes = list() 
         Thread(self.setupGUI()).start()        
 
     def writetoLogfile(self, filename, xor_result, bnkfile, multi_logf):
@@ -571,61 +578,15 @@ class epsig2_gui():
             my_seed = ''
             outfile.writelines("%-40s \t %-40s \t %-60s\n" % ("Seed", "Hash", "Filename"))
             for item in self.LogOutput:
-                outfile.writelines("%40s \t %40s \t %-60s\n" % (self.format_output(str(item['seed']), self.gui_getOptions), 
-                    self.format_output(str(item['hash']), self.gui_getOptions), item['filename']))
+                outfile.writelines("%40s \t %40s \t %-60s\n" % (self.format_output(str(item['seed']), self.options_d), 
+                    self.format_output(str(item['hash']), self.options_d), item['filename']))
                 my_seed = str(item['seed'])
 
-            outfile.writelines("%40s \t %40s \t XOR\n" % (self.format_output(my_seed, self.gui_getOptions), 
-                self.format_output(xor_result.replace(" ", ""), self.gui_getOptions)))
+            outfile.writelines("%40s \t %40s \t XOR\n" % (self.format_output(my_seed, self.options_d), 
+                self.format_output(xor_result.replace(" ", ""), self.options_d)))
 
-    # Returns flipped bits of full length HMACSHA1 (60 Chars? )
-    def getClubsQSIM_Expected_output(self, text): 
+    def getClubsQSIM_Expected_output(self, text): # Returns flipped bits of full length HMACSHA1 (60 Chars? )
         return "".join(reversed([text[i:i+2] for i in range(0, len(text), 2)]))
-
-    def formatSeedText(self):
-            # reverse the seed.
-        if (self.reverse.get() == 1): 
-            self.seed = epsig2.getQCAS_Expected_output(self, self.combobox_SelectSeed.get())
-        else: 
-            self.seed = self.combobox_SelectSeed.get()
-        
-        if self.selectedHashtype.get() == 'HMAC-SHA256': # need to append '0' to include appropirate length
-            self.seed = self.seed.ljust(64, '0')
-
-    def gui_getOptions(self): 
-        options_d = dict() 
-        options_d['cache_file_f'] = self.useCacheFile.get() == 1
-        options_d['uppercase'] = self.uppercase.get() == 1
-        options_d['eightchar'] = self.eightchar.get() == 1
-        options_d['reverse'] = self.reverse.get() == 1
-        options_d['usr_cache_file'] = self.CacheFileButtonText.get()        
-
-        return options_d
-
-    # refer: https://stackoverflow.com/questions/38987/how-do-i-merge-two-dictionaries-in-a-single-expression
-    def merge_two_dicts(self, x, y):
-        z = x.copy()   # start with x's keys and values
-        z.update(y)    # modifies z with y's keys and values & returns None
-        return z
-
-    def updateGUI(self, epsig2_process): 
-        # update main text area window
-
-        # Display Filename to be processed
-        self.text_BNKoutput.insert(END, "\nProcessing: " + epsig2_process.filepath + "\n")
-
-        if epsig2_process.filepath.upper().endswith('.BNK'): 
-            # Display BNK details
-            for hash_result in epsig2_process.LogOutput: 
-                bnk_details_hash_output = hash_result['seed'] + "\t" + hash_result['hash'] + "\t" + hash_result['filename']
-                self.text_BNKoutput.insert(END, bnk_details_hash_output + "\n")
-            
-            self.text_BNKoutput.insert(END, "XOR Result: " + "\n")
-
-        str_output = epsig2.format_output(self, epsig2_process.seed, self.gui_getOptions()) + "\t"\
-            + epsig2_process.xor_result + "\t" + os.path.basename(epsig2_process.filepath)
-        self.text_BNKoutput.insert(END, str_output + "\n")
-
 
     def handleButtonPress(self, myButtonPress):
         
@@ -646,16 +607,33 @@ class epsig2_gui():
                     self.textfield_SelectedBNK.insert(0, fname_basename + "; ")
                     
         elif myButtonPress == '__start__':
+            options_d = dict() 
+            options_d['cache_file_f'] = self.useCacheFile.get() == 1
+            options_d['uppercase'] = self.uppercase.get() == 1
+            options_d['eightchar'] = self.eightchar.get() == 1
+            options_d['reverse'] = self.reverse.get() == 1
+            options_d['usr_cache_file'] = self.CacheFileButtonText.get()
+
             if len(self.filelist) > 0: 
-                #futures = list() 
-                #pool = ThreadPoolExecutor(len(self.filelist)) # one thread per file                
+                futures = list() 
+                pool = ThreadPoolExecutor(len(self.filelist)) # one thread per file                
                 for filepath in self.filelist:
                     logging.debug("Processing: " + filepath)
                     if (os.path.isfile(filepath)):                 
+                        #if self.bnk_filename == '': 
                         self.bnk_filename = os.path.basename(filepath)
+                        
                         self.mandir = os.path.dirname(filepath)
 
-                        self.formatSeedText() 
+                        if (self.reverse.get() == 1): # reverse the seed.
+                            self.seed = epsig2.getQCAS_Expected_output(self, self.combobox_SelectSeed.get())
+                        else: 
+                            self.seed = self.combobox_SelectSeed.get()
+                        
+                        if self.selectedHashtype.get() == 'HMAC-SHA256': # need to append '0' to include appropirate length
+                            self.seed = self.seed.ljust(64, '0')                            
+                            #while (len(self.seed) < 64): # 64 characters for SHA256
+                            #    self.seed = self.seed + "0"
 
                         if (self.clubs_expected_output.get() == 1):
                             message = "\nQSIM reversed seed to use: " + self.getClubsQSIM_Expected_output(self.combobox_SelectSeed.get()) + "\n"
@@ -665,13 +643,8 @@ class epsig2_gui():
                         logging.debug("Seed is: " + self.seed + " length is: " + str(len(self.seed)))
 
                         # create process for hashing a file 
-                        my_p = epsig2(self.seed, filepath, self.gui_getOptions(), self.cache_dict, str(self.selectedHashtype.get())) 
-                        #futures.append(pool.submit(my_p.processfile, filepath, MAXIMUM_BLOCKSIZE_TO_READ)) # add processs to threadpool
-
-                        # update dict() 
-                        self.cache_dict = self.merge_two_dicts(self.cache_dict, my_p.cache_dict)
-
-                        self.updateGUI(my_p)
+                        my_p = epsig2(self.seed, filepath, options_d, self.cache_dict, self.selectedHashtype.get()) 
+                        futures.append(pool.submit(my_p.processfile, filepath, MAXIMUM_BLOCKSIZE_TO_READ)) # add processs to threadpool
 
                         # Create and launch a thread 
                         #t = Thread(group=None, target=my_p.processfile, name=self.bnk_filename, args=(filepath, MAXIMUM_BLOCKSIZE_TO_READ, )) 
@@ -681,29 +654,28 @@ class epsig2_gui():
                     else: 
                         logging.warning(filepath + " does not exist")
 
-                # for x in as_completed(futures):
-                #     my_p_output = x.result() 
-                #     # print(json.dumps(x.result()['rv'], sort_keys=True, indent=True, separators=(',',':')))
+                for x in as_completed(futures):
+                    my_p_output = x.result() 
+                    # print(json.dumps(x.result()['rv'], sort_keys=True, indent=True, separators=(',',':')))
 
-                #     if my_p_output != None:
-                #         # TODO Merge cache_dict with existing cache_dict. 
-                #         # self.cache_dict = my_p_output['cache_dict'] # update cache_dict: TODO: Turn this into an object cache or stick with file_caches. 
+                    if my_p_output != None:
+                        # TODO Merge cache_dict with existing cache_dict. 
+                        # self.cache_dict = my_p_output['cache_dict'] # update cache_dict: TODO: Turn this into an object cache or stick with file_caches. 
 
-                #         self.text_BNKoutput.insert(END, my_p_output['filename'] + "\n")
-                #         for entry in x.result()['rv']: 
-                #             str_output = epsig2.format_output(self, str(entry['seed']), options_d) + "\t"\
-                #                 + epsig2.format_output(self, str(entry['hash']), options_d) + "\t" + str(entry['filename'])
-                            
-                #             self.text_BNKoutput.insert(END, str_output + "\n")
+                        self.text_BNKoutput.insert(END, my_p_output['filename'] + "\n")
+                        for entry in x.result()['rv']: 
+                            str_output = epsig2.format_output(self, str(entry['seed']), options_d) + "\t"\
+                                + epsig2.format_output(self, str(entry['hash']), options_d) + "\t" + str(entry['filename'])
+                            self.text_BNKoutput.insert(END, str_output + "\n")
      
-                #         if self.reverse.get() == 1 and my_p_output['filename'].upper().endswith(".BNK"): 
-                #             xor_result_output_str = "%-50s\tQCAS Expected Formatted Result\n" % str(my_p_output['oh'])
-                #         elif self.reverse.get() == 0 and my_p_output['filename'].upper().endswith(".BNK"): 
-                #             xor_result_output_str = "%-50s\tXOR Formatted Result\n" % str(my_p_output['oh']) 
-                #         else: 
-                #             xor_result_output_str = "%-50s\tFormatted Result\n" % str(my_p_output['oh']) 
+                        if self.reverse.get() == 1 and my_p_output['filename'].upper().endswith(".BNK"): 
+                            xor_result_output_str = "%-50s\tQCAS Expected Formatted Result\n" % str(my_p_output['oh'])
+                        elif self.reverse.get() == 0 and my_p_output['filename'].upper().endswith(".BNK"): 
+                            xor_result_output_str = "%-50s\tXOR Formatted Result\n" % str(my_p_output['oh']) 
+                        else: 
+                            xor_result_output_str = "%-50s\tFormatted Result\n" % str(my_p_output['oh']) 
 
-                #         self.text_BNKoutput.insert(END, xor_result_output_str + "\n")
+                        self.text_BNKoutput.insert(END, xor_result_output_str + "\n")
 
             else:
                 messagebox.showerror("BNK files not selected.", "Please select files first")
@@ -736,6 +708,7 @@ class epsig2_gui():
                 self.useCacheFile.set(0)
                 self.CacheFileButtonText.set(DEFAULT_CACHE_FILE)
                 self.user_cache_file = None
+                self.processes = list()
                 self.selectedHashtype.set("HMAC-SHA1")
                 
         elif myButtonPress == '__clear_cache__':
@@ -750,6 +723,8 @@ class epsig2_gui():
                     self.cache_dict = cache_file.cache_dict # Overwrite self.cache_dict with contents of file
                 else:
                     self.cache_dict = {} # empty_cache_data # Clear cache_dict
+
+                self.processes = list()
 
 
         elif myButtonPress == '__print_cache__':
@@ -806,10 +781,10 @@ class epsig2_gui():
             self.combobox_SelectSeed['values'] = self.processsl1file(fname)
         else:
             messagebox.showerror("Expected SL1 or MSL file to Process", fname + " is not a valid seed file")
-            # sys.exit(1)                 
+            sys.exit(1)                 
 
     def aboutwindow(self):
-        about_script = "Version: v" + VERSION + " by aceretjr\n Python3 script for processing BNK and BIN files."
+        about_script = "Version: v" + VERSION + " by aceretjr\n python 3 script for processing BNK files."
         messagebox.showinfo("About This Script", about_script)
 
     def SelectHashType(self, value): 
