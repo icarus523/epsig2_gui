@@ -4,6 +4,8 @@ import os
 class epsig2GUI_TestClient(unittest.TestCase): 
 
     def setUp(self): 
+        self.bnkfile = ''
+        self.binfile = ''        
 
         if (os.name == 'nt'): # Windows OS
             self.bnkfile = """G:\OLGR-TECHSERV\BINIMAGE\AGT\GDQL163A_1I6A_003.bnk"""
@@ -22,9 +24,11 @@ class epsig2GUI_TestClient(unittest.TestCase):
         self.options_d['eightchar'] = False
         self.options_d['reverse'] = False
         self.options_d['usr_cache_file'] = False
-
+        self.options_d['selectedHashtype'] = 'HMAC-SHA1'
+        
         self.cache_dict = {}
-
+        self.user_cache_file = 'epsig2_cachefile_v3.json'
+        
     def tearDown(self): 
         self.cache_dict = {}
 
