@@ -1072,7 +1072,7 @@ class epsig2_gui(threading.Thread):
 
         ################ Bottom FRAME ##############
         frame_bottombuttons = ttk.Frame(self.root)
-        frame_bottombuttons.pack(side=BOTTOM, fill=X, expand = True)
+        frame_bottombuttons.pack(side=BOTTOM, fill=X, expand = False)
         frame_bottombuttons.config(relief = None, borderwidth = 2)
 
         ################ Bottom Control FRAME ##############
