@@ -41,6 +41,15 @@ Where:-
     oa40227a.bin OA4R p  
     sc0130b1.bin OA4F p  
 
-### Latest Changes v1.4.3
-- Implement Hashing weighting
-- Implement individual Manufacturer Cache File. 
+
+ ### v1.5
+ - separate epsig2 class (for use with: from epsig2_gui import epsig2)
+ - separate Cache File as a separate class
+ - By Default, a File Cache is now used as the OS can manage the resource being used
+ - new Seed class, to add support to formatting and different behaviours when using different hash types
+ - seed is automatically padded/truncated automatically based on Hash-Type selected
+ - Add support to BIN hashing (SG Gaming's ArgOS)
+ - Add support to paste a complete path in the BNK/BIN file text edit field (for Bang's processes)
+ - Now includes unit tests, to excercise the functions being utilised
+ - Output to Output Field, has been changed to the format: <SEED>/t<HASH>/t<FNAME> - 
+ - GUI has been standardised: padding, relief, etc.
