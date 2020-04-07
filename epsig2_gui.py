@@ -48,7 +48,7 @@
 #           - seed is automatically padded/truncated automatically based on Hash-Type selected
 #       - Add support to BIN hashing (SG Gaming's ArgOS)
 #       - Add support to paste a complete path in the BNK/BIN file text edit field (for Bang's processes)
-#       - Now includes unit tests, to excercise the functions being utilised
+#       - Now includes unit tests, to exercise the functions being utilised
 #       - Output to Output Field, has been changed to the format: <SEED>/t<HASH>/t<FNAME> - 
 #       - GUI has been standardised: button sizes, padding, relief, etc.
 
@@ -286,7 +286,7 @@ class epsig2():
                 # time.sleep(1)
                 block = f.read(chunksize)
                 done += chunksize
-                # sys.stdout.write("%7d"%(done*100/size) + "%" + p_reset)
+                sys.stdout.write("%7d"%(done*100/size) + "%" + p_reset)
                 if not block: break
                 m.update(block)      
         return m.hexdigest()
@@ -401,14 +401,13 @@ class epsig2():
                     reader = csv.DictReader(infile, delimiter=' ', fieldnames = fdname)
 
                     # logging.debug("%-50s\tSEED" % (self.format_output(self.seed, self.options_d)))
-
                     #futures = list() 
                     #pool = ThreadPoolExecutor(5) # 5 threads max
 
                     for row in reader:
                         if str(row['type']).upper() == 'SHA1' or str(row['type']).upper() == 'SHA256':
                             # check if the file exists
-                            fp = os.path.join(self.mandir, str(row['fname']))
+                            fp = self.mandir + "/" + str(row['fname']) # can't use: os.path.join(self.mandir, str(row['fname'])), as the Cache expects "/"
                             if (os.path.isfile(fp)):
 
                                 # The following should return a string if matches or None   
@@ -542,13 +541,13 @@ class epsig2():
             with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
                 future.append(executor.submit(self.dobnk, fname, chunks))
             # h = self.dobnk(fname, chunks)
-        elif fname.upper().endswith(".BIN"): #  and self.mode == 'BIN': 
+        elif fname.upper().endswith(".BIN"): 
             with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
                 future.append(executor.submit(self.dobin, fname, chunks))
             # h = self.dobin(fname, chunks)
         else: 
             logging.error("unknown file type selected: " + fname)
-            messagebox.showerror("Invalid files selected", "Please select Mode and BNK/BIN files.")
+            messagebox.showerror("Invalid files selected", "Please select either .BNK or .BIN files only")
             return 
 
         for x in as_completed(future): 
