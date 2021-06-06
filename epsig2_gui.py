@@ -110,7 +110,8 @@ class CacheFile():
         self.updateCacheFile(cache_data)
 
     def importCacheFile(self):
-        cache_data = ''
+        cache_data = dict() # empty
+
         if self.user_cache_file: # Handle User selectable Cache File
             cache_location = self.user_cache_file
         else: 
@@ -195,8 +196,6 @@ class CacheFile():
                           separators=(',', ': '))
             
             self.signCacheFile(cache_location) # Sign Cache
-
-
 
 ## Main epsig2 class
 class epsig2():
@@ -577,25 +576,31 @@ class Seed():
 
     def __init__(self, seed, hash_type):
         self.hash_type = hash_type 
-        self.seed = seed
 
-    def getSeed(self): 
+        valid_hash_types = ['HMAC-SHA256', 'HMAC-SHA1']
+        if hash_type in valid_hash_types: 
+            self.seed = self.getSeed(seed)
+            logging.warning("Seed Modifed to: " + self.seed)
+
+        else:
+            self.seed = seed
+
+
+    def getSeed(self, s): 
         output_str = ''
         # need to append '0' to include appropriate length
-        if self.hash_type == 'HMAC-SHA256' and len(self.seed) < 64: 
+        if self.hash_type == 'HMAC-SHA256' and len(s) < 64: 
             # append
-            output_str = self.seed.ljust(64, '0')
-        elif self.hash_type == 'HMAC-SHA1' and len(self.seed) < 40:
-            output_str = self.seed.ljust(40, '0')
-        elif self.hash_type == 'HMAC-SHA256' and len(self.seed) > 64: 
+            output_str = s.ljust(64, '0')
+        elif self.hash_type == 'HMAC-SHA1' and len(s) < 40:
+            output_str = s.ljust(40, '0')
+        elif self.hash_type == 'HMAC-SHA256' and len(s) > 64: 
             # truncate
-            output_str = self.seed[:64] 
-        elif self.hash_type == 'HMAC-SHA1' and len(self.seed) > 40: 
-            output_str = self.seed[:40] 
+            output_str = s[:64] 
+        elif self.hash_type == 'HMAC-SHA1' and len(s) > 40: 
+            output_str = s[:40] 
         else: 
-            output_str = self.seed
-
-        logging.warning("Seed Modifed to: " + output_str)
+            return s
 
         return output_str
 

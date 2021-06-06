@@ -3,18 +3,22 @@ import os
 import csv
 
 from epsig2GUI_TestClient import epsig2GUI_TestClient
-from epsig2_gui import epsig2
+from epsig2_gui import epsig2, Seed
 
 class test_epsig2_functions(epsig2GUI_TestClient):      
 
     def test_dobnk_SHA1(self): 
-        self.bnkfile = '/Users/james/Documents/dev/bnkfiles/5D81F_W4QLQ05M.BNK'
+        self.bnkfile = 'bnkfiles/5D81F_W4QLQ05M.BNK'
         self.seed = '0000000000000000000000000000000000000000'
         self.mandir = os.path.dirname(self.bnkfile)
         self.options_d['cache_file_f'] = True 
         self.LogOutput = list() 
         self.selectedHashtype = 'HMAC-SHA1'    
-        expected_result = '94C5809DEA787F1584A5CA6CFDF4210A9E831018'
+        self.options_d['selectedHashtype'] = self.selectedHashtype        
+
+        self.seed = Seed('0000000000000000000000000000000000000000', self.selectedHashtype).seed
+
+        expected_result = 'FC1FE2617F2B5EF0C0652FB8D1345738782E6468'
 
         h = epsig2.dobnk(self, self.bnkfile, blocksize=8192)
         formatted_h = epsig2.format_output(self, str(h), self.options_d) 
@@ -23,13 +27,15 @@ class test_epsig2_functions(epsig2GUI_TestClient):
 
 
     def test_dobnk_SHA256(self): 
-        self.bnkfile = '/Users/james/Documents/dev/bnkfiles/5D81F_W4QLQ05M.BNK'
-        self.seed = '0000000000000000000000000000000000000000000000000000000000000000'
+        self.bnkfile = 'bnkfiles/5D81F_W4QLQ05M.BNK'
         self.mandir = os.path.dirname(self.bnkfile)
-        self.options_d['cache_file_f'] = True 
+        self.options_d['cache_file_f'] = False 
         self.LogOutput = list() 
         self.selectedHashtype = 'HMAC-SHA256'    
-        expected_result = '00000000000000000000000094C5809DEA787F1584A5CA6CFDF4210A9E831018'
+        self.options_d['selectedHashtype'] = self.selectedHashtype        
+        self.seed = Seed('0000000000000000000000000000000000000000000000000000000000000000', self.selectedHashtype).seed
+
+        expected_result = '000000000000000000000000FC1FE2617F2B5EF0C0652FB8D1345738782E6468'
 
         h = epsig2.dobnk(self, self.bnkfile, blocksize=8192)
         formatted_h = epsig2.format_output(self, str(h), self.options_d) 
@@ -46,7 +52,7 @@ class test_epsig2_functions(epsig2GUI_TestClient):
         self.options_d['reverse'] = False
         self.options_d['usr_cache_file'] = False
         self.selectedHashtype = 'HMAC-SHA1'
-
+        self.options_d['selectedHashtype'] = self.selectedHashtype        
         output_str = epsig2.format_output(self, inputstr, self.options_d)
         self.assertEqual(output_str, '94C5809DEA787F1584A5CA6CFDF4210A9E831018')
 
@@ -59,7 +65,7 @@ class test_epsig2_functions(epsig2GUI_TestClient):
         self.options_d['reverse'] = False
         self.options_d['usr_cache_file'] = False
         self.selectedHashtype = 'HMAC-SHA256'
-
+        self.options_d['selectedHashtype'] = self.selectedHashtype        
         output_str = epsig2.format_output(self, inputstr, self.options_d)
         self.assertEqual(output_str, '92971BEB3F6D486BDB86402E8E9E2C726D1173D7999F3F7188F3884663181FF0')
 
@@ -72,7 +78,7 @@ class test_epsig2_functions(epsig2GUI_TestClient):
         self.options_d['reverse'] = False
         self.options_d['usr_cache_file'] = False
         self.selectedHashtype = 'HMAC-SHA256'
-
+        self.options_d['selectedHashtype'] = self.selectedHashtype        
         output_str = epsig2.format_output(self, inputstr, self.options_d)
         self.assertEqual(output_str, '92971BEB 3F6D486B DB86402E 8E9E2C72 6D1173D7 999F3F71 88F38846 63181FF0')
 
@@ -85,7 +91,7 @@ class test_epsig2_functions(epsig2GUI_TestClient):
         self.options_d['reverse'] = True
         self.options_d['usr_cache_file'] = False
         self.selectedHashtype = 'HMAC-SHA256'
-
+        self.options_d['selectedHashtype'] = self.selectedHashtype        
         output_str = epsig2.format_output(self, inputstr, self.options_d)
         self.assertEqual(output_str, 'eb1b9792')
 
@@ -116,7 +122,7 @@ class test_epsig2_functions(epsig2GUI_TestClient):
         self.mandir = os.path.dirname(self.bnkfile)
 
         self.cache_dict = {
-            "/Users/james/Documents/dev/bnkfiles/5D81F.sigs":[
+            "bnkfiles/5D81F.sigs":[
                 {
                     "alg":"SHA1",
                     "hash":"387a1d858b2f32d7f8074f2b33b673b8f5f42339",
@@ -128,7 +134,7 @@ class test_epsig2_functions(epsig2GUI_TestClient):
                     "seed":"0000000000000000000000000000000000000000000000000000000000000000"
                 }                    
             ],
-            "/Users/james/Documents/dev/bnkfiles/SBGEN024.img":[
+            "bnkfiles/SBGEN024.img":[
                 {
                     "alg":"SHA1",
                     "hash":"c6967f4f9240f15ea742f8d57b347b3142427e51",
@@ -140,7 +146,7 @@ class test_epsig2_functions(epsig2GUI_TestClient):
                     "seed":"0000000000000000000000000000000000000000000000000000000000000000"
                 }                    
             ],
-            "/Users/james/Documents/dev/bnkfiles/W4QLQ05M.sigs":[
+            "bnkfiles/W4QLQ05M.sigs":[
                 {
                     "alg":"SHA1",
                     "hash":"6a29e257f317bc9cdbe07d92b576298329354d70",
@@ -161,9 +167,9 @@ class test_epsig2_functions(epsig2GUI_TestClient):
                 fp = self.mandir + "/" + str(row['fname'])
                 hash_value = epsig2.checkCacheFilename_BNK(self, fp, self.seed, row['type'].upper())
 
-                if fp == "/Users/james/Documents/dev/bnkfiles/5D81F.sigs": 
+                if fp == "bnkfiles/5D81F.sigs": 
                     self.assertEqual(hash_value, '387a1d858b2f32d7f8074f2b33b673b8f5f42339')
-                elif fp == "/Users/james/Documents/dev/bnkfiles/SBGEN024.img": 
+                elif fp == "bnkfiles/SBGEN024.img": 
                     self.assertEqual(hash_value, 'c6967f4f9240f15ea742f8d57b347b3142427e51')
-                elif fp == "/Users/james/Documents/dev/bnkfiles/W4QLQ05M.sigs": 
+                elif fp == "bnkfiles/W4QLQ05M.sigs": 
                     self.assertEqual(hash_value, '6a29e257f317bc9cdbe07d92b576298329354d70')
