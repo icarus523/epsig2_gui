@@ -1,0 +1,855 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"ent",
+				"entry_l"
+			],
+			[
+				"loca",
+				"local_df_filelist"
+			],
+			[
+				"file",
+				"filename"
+			],
+			[
+				"tl0",
+				"tl0_entry"
+			],
+			[
+				"OC",
+				"OCT_2020_DM1_FILELIST_V3"
+			],
+			[
+				"OCT",
+				"OCT_2020_DM1_FILELIST_V3"
+			],
+			[
+				"lm",
+				"lm1_entry"
+			],
+			[
+				"str",
+				"strptime"
+			],
+			[
+				"lm1",
+				"lm1_entry"
+			],
+			[
+				"lm1_en",
+				"lm1_entries"
+			],
+			[
+				"lm1_e",
+				"lm1_entry"
+			],
+			[
+				"la1",
+				"la1_entry"
+			],
+			[
+				"l1a",
+				"la1_file"
+			],
+			[
+				"va0",
+				"va0_file_l"
+			],
+			[
+				"get",
+				"get_vm0_filelist"
+			],
+			[
+				"OCT_",
+				"OCT_2020_VA0_FILELIST_V2"
+			],
+			[
+				"gm1",
+				"gm1_entry_mod"
+			],
+			[
+				"delta_",
+				"delta_overflow_amount"
+			],
+			[
+				"jm1",
+				"jm1_entry"
+			],
+			[
+				"lem",
+				"lm1_entry"
+			],
+			[
+				"jp",
+				"jp_id_operational"
+			],
+			[
+				"jm1_",
+				"jm1_file"
+			],
+			[
+				"assert",
+				"assertEqual"
+			],
+			[
+				"la1_fil",
+				"la1_file_list"
+			],
+			[
+				"copy",
+				"copy_file"
+			],
+			[
+				"read",
+				"read_LA0_file"
+			],
+			[
+				"egm",
+				"egm_ser"
+			],
+			[
+				"mm1",
+				"mm1_entries_l"
+			],
+			[
+				"dm1_file",
+				"dm1_filelist"
+			],
+			[
+				"seril",
+				"egm_serial_number"
+			],
+			[
+				"mm1_",
+				"mm1_entry"
+			],
+			[
+				"dm1",
+				"dm1_file"
+			],
+			[
+				"AUG",
+				"AUG_2020_DM1_FILELIST"
+			],
+			[
+				"game",
+				"game_version_number"
+			],
+			[
+				"jm1_fi",
+				"jm1_filename_l"
+			],
+			[
+				"egm_",
+				"egm_operational_day"
+			],
+			[
+				"vm0_i",
+				"vm0_file_l"
+			],
+			[
+				"vm0",
+				"vm0_entry"
+			],
+			[
+				"gm1_",
+				"gm1_entry_mod"
+			],
+			[
+				"gam",
+				"game_variation"
+			],
+			[
+				"vm0_",
+				"vm0_file"
+			],
+			[
+				"meter",
+				"meter_balance_check_l"
+			],
+			[
+				"cas",
+				"cash_ticket_printer_out"
+			],
+			[
+				"total",
+				"total_cents_out"
+			],
+			[
+				"nu",
+				"number_of_100_dollar_notes_in"
+			],
+			[
+				"num",
+				"number_of_50_dollar_notes_in"
+			],
+			[
+				"numb",
+				"number_of_20_dollar_notes_in"
+			],
+			[
+				"coi",
+				"coins_tokens_cleared"
+			],
+			[
+				"cash",
+				"cashless_in"
+			],
+			[
+				"coins",
+				"coins_to_cashbox"
+			],
+			[
+				"ti",
+				"cash_ticket_in"
+			],
+			[
+				"egm_s",
+				"egm_serial_number"
+			],
+			[
+				"mm1_en",
+				"mm1_entries"
+			],
+			[
+				"seri",
+				"egm_serial_number"
+			],
+			[
+				"dm",
+				"dm_entry"
+			],
+			[
+				"ma",
+				"ma1_entry"
+			],
+			[
+				"ma1",
+				"ma1_file"
+			],
+			[
+				"mm",
+				"mm1_entry"
+			],
+			[
+				"va",
+				"va0_entries"
+			],
+			[
+				"expec",
+				"expectedFailure"
+			],
+			[
+				"number",
+				"number_of_entries"
+			],
+			[
+				"rea",
+				"read_entries_l"
+			],
+			[
+				"vc1",
+				"vc1_entry"
+			],
+			[
+				"dc2",
+				"dc2_entry"
+			],
+			[
+				"eg",
+				"egm_serial_number"
+			],
+			[
+				"la",
+				"la1_entry"
+			],
+			[
+				"LA1",
+				"LA1_file_l"
+			],
+			[
+				"qcom",
+				"qcom_0x0E_reserve"
+			],
+			[
+				"sap",
+				"total_SAP_wins"
+			],
+			[
+				"Date",
+				"Date_of_Adjustment"
+			],
+			[
+				"MA1",
+				"MA1_file_l"
+			],
+			[
+				"LP",
+				"lp_wins"
+			],
+			[
+				"MM1",
+				"MM1Entry"
+			],
+			[
+				"MA",
+				"MA1Entry"
+			],
+			[
+				"Jackpot",
+				"JackpotEGMConfiguration"
+			],
+			[
+				"gvn",
+				"gvn_meter_report_fname"
+			],
+			[
+				"Game",
+				"GameVariationMetersReport"
+			],
+			[
+				"jm",
+				"jm1_file_l"
+			],
+			[
+				"jpt",
+				"jpt_lvl_meters_report_sim_win_fname"
+			],
+			[
+				"ve",
+				"verified_pgid_l"
+			],
+			[
+				"JG",
+				"JG1_file_l"
+			],
+			[
+				"jg1",
+				"jg1_entry"
+			],
+			[
+				"level",
+				"level_id"
+			],
+			[
+				"tot",
+				"total_LP_wins"
+			],
+			[
+				"jackpo",
+				"jackpot_level_name"
+			],
+			[
+				"jackpot",
+				"jackpot_level_ID"
+			],
+			[
+				"JL",
+				"JL1_file_l"
+			],
+			[
+				"Lev",
+				"Level_ID_Number"
+			],
+			[
+				"Group",
+				"Group_Name"
+			],
+			[
+				"JL1",
+				"JL1_file"
+			],
+			[
+				"GVN",
+				"game_version_number"
+			],
+			[
+				"Utopia",
+				"UtopiaReports"
+			],
+			[
+				"egm_m",
+				"egm_mr_280720"
+			],
+			[
+				"exp",
+				"expected_cc"
+			],
+			[
+				"dm1_",
+				"dm1_entry"
+			],
+			[
+				"to",
+				"toJSON"
+			],
+			[
+				"egm_mr",
+				"egm_mr_290720"
+			],
+			[
+				"canc",
+				"cancel_credit_list"
+			],
+			[
+				"egm_meter_report_",
+				"egm_meter_report_280720"
+			],
+			[
+				"EGM",
+				"EGMMeterReport"
+			],
+			[
+				"coins_",
+				"coins_to_cashbox"
+			],
+			[
+				"jl1",
+				"jl1_entry"
+			],
+			[
+				"write",
+				"writetoLogfile"
+			],
+			[
+				"format",
+				"format_output"
+			],
+			[
+				"selecte",
+				"selectedHashtype"
+			],
+			[
+				"sle",
+				"selectedHashtype"
+			],
+			[
+				"HMAC-SH",
+				"HMAC-SHA1"
+			],
+			[
+				"eps",
+				"epsig2"
+			],
+			[
+				"ca",
+				"cache_data"
+			],
+			[
+				"cach",
+				"cachedhit"
+			],
+			[
+				"HMAC",
+				"HMAC-SHA1"
+			],
+			[
+				"test",
+				"test_cache_file"
+			],
+			[
+				"selec",
+				"selectedHashtype"
+			],
+			[
+				"hash",
+				"hash_type_str"
+			],
+			[
+				"epsig2",
+				"epsig2_process"
+			],
+			[
+				"epsig",
+				"epsig2_process"
+			],
+			[
+				"cache",
+				"cache_dict"
+			],
+			[
+				"proce",
+				"processfile"
+			],
+			[
+				"b",
+				"bnkfile2"
+			],
+			[
+				"bnk",
+				"bnkfile"
+			],
+			[
+				"result",
+				"result_d"
+			],
+			[
+				"ele_",
+				"ele_value"
+			],
+			[
+				"new",
+				"new_fname"
+			],
+			[
+				"bnk_fi",
+				"bnk_filelist"
+			],
+			[
+				"process",
+				"processes"
+			],
+			[
+				"pro",
+				"processes"
+			],
+			[
+				"DEBUG",
+				"DEBUG_MODE"
+			],
+			[
+				"update",
+				"updateCacheFile"
+			]
+		]
+	},
+	"buffers":
+	[
+	],
+	"build_system": "",
+	"build_system_choices":
+	[
+		[
+			[
+				[
+					"Packages/Python/Python.sublime-build",
+					""
+				],
+				[
+					"Packages/Python/Python.sublime-build",
+					"Syntax Check"
+				]
+			],
+			[
+				"Packages/Python/Python.sublime-build",
+				""
+			]
+		]
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 392.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"install ",
+				"Package Control: Install Package"
+			],
+			[
+				"package",
+				"Install Package Control"
+			],
+			[
+				"Snippet: ",
+				"Snippet: XML Processing Instruction"
+			],
+			[
+				"Package Control: ",
+				"Package Control: Install Package"
+			]
+		],
+		"width": 412.0
+	},
+	"console":
+	{
+		"height": 202.0,
+		"history":
+		[
+			"help",
+			"ls"
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"expanded_folders":
+	[
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/epsig2_gui"
+	],
+	"file_history":
+	[
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/09000089.JC0",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/01606556.dm1",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/new/09000001.DM1",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/new/09000001.JC0",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/new/09000002.VM0",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/09000248.LA1",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/tests/test_MM1_datafile.py",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/tests/test_LM1_datafile.py",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/tests/test_GM1_datafile.py",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/tests/test_VM0_datafile.py",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/UtopiaReports.py",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/tests/test_DC2_datafile.py",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/tests/test_TL0_datafile.py",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/09000209.dm1",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/09000221.mm1",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/09000109.VM0",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/09000114.VM0",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/09000115.vm0",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/09000167.vm0",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/09000169.vm0",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/09000184.mm1",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/09000214.jm1",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/09000207.jm1",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/09000215.LA1",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/09000221.lm1",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/09000213.jm1",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/tests/test_incoming_datafile_formats.py",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/tests/test_DM1_datafile.py",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/tests/test_VC1_datafile.py",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/09000134.dm1",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/09000184.gm1",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/09000129.va0",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/09000129.ma1",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/tests/test_LA1_datafile.py",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/tests/test_VA0_datafile.py",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/csv_files/GameVariationMetersReport 333021.csv",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/09000109.JM1",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/09000109.JC0",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/csv_files/JackpotEGMConfiguration PGID1055.csv",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/csv_files/JackpotEGMConfiguration PGID 1099.csv",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/csv_files/JackpotEGMConfiguration PGID1095.csv",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/csv_files/JackpotEGMConfiguration PGID1085.csv",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/csv_files/JackpotEGMConfiguration_PGID_1074_fix.csv",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/csv_files/JackpotEGMConfiguration QCOM 1.6 Custom SAP - fixed.csv",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/09000180.la1",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/09000180.ma1",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/09000183.vc1",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/tests/test_MA1_datafile.py",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/csv_files/Aug JackpotMeterAdjustment 030920.csv",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/csv_files/August_EGMMetersAdjustments_030920.csv",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/tests/test_JC0_datafile.py",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/tests/test_JG1_datafile.py",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/tests/test_JL1_datafile.py",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/csv_files/Aug GameVariationMeterAdjustments 030920.csv",
+		"/T/cogsa/docs/lmo/lmo09/for/09000165.la1",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/csv_files/Aug GameVariationMeterAdjustments 030920-J2091408.csv",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/09000158.jl1",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/csv_files/JackpotEGMConfiguration QCOM 1.6 Multigame SAP Golden Cash - fixed.csv",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/csv_files/JackpotEGMConfiguration QCOM 1.6 Multigame SAP Panda Magic - fixed.csv",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/csv_files/JackpotEGMConfiguration QCOM 1.6 SAP.csv",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/tests/test_JM1_datafile.py",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/qcasDFtest/__qcasDF_gui_control.pyw",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/monthly_billing_check_new_templates/monthlycheck.py",
+		"/C/Program Files/Sublime Text 3/Data/Packages/User/newPython3.sublime-build",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/test.py",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/tests/test_scenarios.py",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/csv_files/JackpotLevelMetersReport SIm Wins 280720.csv",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/csv_files/JackpotEGMConfiguration QCOM 1.6 Multigame SAP Panda Magic.csv",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/csv_files/JackpotEGMConfiguration QCOM 1.6 Multigame SAP Golden Cash.csv",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/csv_files/JackpotEGMConfiguration QCOM 1.6 Custom SAP.csv",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/tests/test_metered_win_reconciliation_report.py",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/csv_files/JackpotEGMConfiguration Link Progressive - fixed - jg1.csv",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/09000109.JG1",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/csv_files/EGMMeterReport Net.csv",
+		"/G/OLGR-TECHSERV-TSS-FILES/EGM/Utopia/CEMS SC and Interface Board v1.01 Submission/20200729 UGS Datafile Test Case Scenario submission/GameVariationMetersReport 940197 290720.csv",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/09000109.DM1",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/csv_files/JackpotEGMConfiguration Link Progressive - fixed.csv",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/09000109.JL1",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/csv_files/MeteredWinReconReport 280720.csv",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/tests/test_functions.py",
+		"/G/OLGR-TECHSERV-TSS-FILES/EGM/Utopia/CEMS SC and Interface Board v1.01 Submission/20200729 UGS Datafile Test Case Scenario submission/JackpotEGMConfiguration QCOM 1.6 Custom SAP.csv",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/09000109.VC1",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/09000109.DC2",
+		"/G/OLGR-TECHSERV-TSS-FILES/EGM/Utopia/CEMS SC and Interface Board v1.01 Submission/20200729 UGS Datafile Test Case Scenario submission/JackpotLevelMetersReport LP 280720.csv",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/csv_files/JackpotLevelMetersReport LP 280720.csv",
+		"/G/OLGR-TECHSERV-TSS-FILES/EGM/Utopia/CEMS SC and Interface Board v1.01 Submission/20200729 UGS Datafile Test Case Scenario submission/JackpotEGMConfiguration Link Progressive.csv",
+		"/G/OLGR-TECHSERV-TSS-FILES/EGM/Utopia/CEMS SC and Interface Board v1.01 Submission/20200729 UGS Datafile Test Case Scenario submission/JackpotLevelMetersReport LP 290720.csv",
+		"/G/OLGR-TECHSERV-TSS-FILES/EGM/Utopia/CEMS SC and Interface Board v1.01 Submission/20200729 UGS Datafile Test Case Scenario submission/GameVariationMetersReport 803022 290720.csv",
+		"/G/OLGR-TECHSERV-TSS-FILES/EGM/Utopia/CEMS SC and Interface Board v1.01 Submission/20200729 UGS Datafile Test Case Scenario submission/GameVariationMetersReport 940197 280720.csv",
+		"/G/OLGR-TECHSERV-TSS-FILES/EGM/Utopia/CEMS SC and Interface Board v1.01 Submission/20200729 UGS Datafile Test Case Scenario submission/MeteredWinReconReport 280720.csv",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/09000089.JG1",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/09000089.JL1",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/dev/incoming-datafiles/incoming_datafiles/09000089.DM1",
+		"/C/Users/aceretjr/DJAG/OneDrive Work - Documents/WFH/incoming-datafiles/incoming_datafiles/09000083.JM1",
+		"/Users/james/Documents/dev/python/new/epsig2_gui/epsig2.log",
+		"/Users/james/Documents/dev/python/new/epsig2_gui/epsig2_cachefile_v3.json",
+		"/Users/james/Documents/dev/python/new/epsig2_gui/tests/test_epsig2.py",
+		"/Users/james/Documents/dev/python/new/epsig2_gui/tests/test_BNK_file.py",
+		"/Users/james/Documents/dev/python/new/epsig2_gui/epsig2_gui_backup.py",
+		"/Users/james/Documents/dev/python/epsig2_gui/epsig2_gui.py",
+		"/Users/james/bin/sha1sum.sh",
+		"/Users/james/Documents/dev/python/epsig_xml_verification/test/CC27AU_QSIM_v2.xml",
+		"/Users/james/Documents/dev/python/new/epsig2_gui/epsig2_gui.py",
+		"/Users/james/Documents/dev/python/new/epsig2_gui/epsig2_cachefile_v2.json",
+		"/Users/james/Documents/dev/qcasDFtest/__qcasDF_gui_control.py",
+		"/Users/james/Documents/dev/python/new/epsig2_gui/epsig2_cachefile_v2.sigs",
+		"/Users/james/Library/Application Support/Sublime Text 3/Packages/User/python3.sublime-build",
+		"/Applications/World of Warcraft/_classic_/Interface/AddOns/Doom_CooldownPulse/Doom_CooldownPulse.lua",
+		"/Users/james/Documents/dev/tattsrng_olgr_client/tattsRNG_olgr_client_ssl.py",
+		"/Users/james/Documents/dev/qcasDFtest/test_datafiles.py",
+		"/Users/james/Documents/dev/LotteriesRNSClient/test_LotteriesRNSClient.py",
+		"/Users/james/Documents/dev/datafilesbrowser/test_datafilesbrowser.py",
+		"/Users/james/Documents/dev/datafilesbrowser/olgr_datafile.py",
+		"/Users/james/Documents/dev/datafilesbrowser/datafilesbrowser.py",
+		"/Users/james/Documents/dev/datafilesbrowser/datafile.py",
+		"/Users/james/Documents/dev/qcasTSLgenerator/qcasTSLgenerator_gui.py",
+		"/Users/james/Documents/dev/python/tattsRNG_olgr_client/tattsrng_olgr_client/tattsRNG_olgr_client_ssl.py",
+		"/Users/james/Documents/dev/python/toilet-stall-booker/toiletbooker.py",
+		"/Volumes/Cloud Storage/Dropbox/Work/dev/python/datasfilebrowser/datafilesbrowser.py",
+		"/Users/james/Documents/dev/mailto2/MailtoManage.py",
+		"/Users/james/Documents/dev/playtest_harness/test_linewins.py",
+		"/Users/james/Documents/dev/playtest_harness/test_scatterwins.py",
+		"/Users/james/Documents/dev/lua/qcom1_6_to_3/dll.lua",
+		"/Users/james/Documents/dev/lua/qcom1_6_to_3/cdc.lua",
+		"/Users/james/Documents/dev/lua/qcom1_6_to_3/log_events.lua",
+		"/Users/james/Documents/dev/lua/qcom1_6_to_3/process_poll.lua",
+		"/Users/james/Documents/dev/python/datasfilebrowser/git/datafilesbrowser/datafilesbrowser.py",
+		"/Users/james/Documents/dev/python/datasfilebrowser/datafilesbrowser.py"
+	],
+	"find":
+	{
+		"height": 27.0
+	},
+	"find_in_files":
+	{
+		"height": 105.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+		],
+		"reverse": false,
+		"scrollbar_highlights": true,
+		"show_context": true,
+		"use_buffer2": true,
+		"use_gitignore": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"folders":
+	[
+		{
+			"path": "C:\\Users\\aceretjr\\DJAG\\OneDrive Work - Documents\\WFH\\dev\\epsig2_gui"
+		}
+	],
+	"groups":
+	[
+		{
+			"sheets":
+			[
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 27.0
+	},
+	"input":
+	{
+		"height": 103.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.exec":
+	{
+		"height": 237.0
+	},
+	"output.find_results":
+	{
+		"height": 109.0
+	},
+	"pinned_build_system": "Packages/User/newPython3.sublime-build",
+	"project": "",
+	"replace":
+	{
+		"height": 50.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_symbol":
+	{
+		"height": 392.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 392.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+	},
+	"show_minimap": false,
+	"show_open_files": true,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 375.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+		"max_columns": 3
+	}
+}

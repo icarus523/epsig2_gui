@@ -1,11 +1,18 @@
 import unittest
 import os
 import csv
+import epsig2_gui
 
 from epsig2GUI_TestClient import epsig2GUI_TestClient
 from epsig2_gui import epsig2, Seed
 
 class test_epsig2_functions(epsig2GUI_TestClient):      
+
+    def test_path_exists(self): 
+        self.bnkfile = 'G:/OLGR-TECHSERV/BINIMAGE/KONAMI/1645GDXX_393_004.BNK'
+        print(self.bnkfile)
+        self.assertTrue(epsig2_gui.epsig2_gui.verifyFileExists(None, self.bnkfile))
+
 
     def test_dobnk_SHA1(self): 
         self.bnkfile = 'bnkfiles/5D81F_W4QLQ05M.BNK'

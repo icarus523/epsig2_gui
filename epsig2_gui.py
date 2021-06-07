@@ -51,7 +51,8 @@
 #       - Now includes unit tests, to exercise the functions being utilised
 #       - Output to Output Field, has been changed to the format: <SEED>/t<HASH>/t<FNAME> - 
 #       - GUI has been standardised: button sizes, padding, relief, etc.
-
+# v1.5b - add check for when contents of BNK file does not exist in expected path
+# 
 import os
 import sys
 import csv
@@ -358,13 +359,12 @@ class epsig2():
                         outputstr = "%-50s\t%-s\t%-10s" % (self.format_output(str(localhash), 
                             self.options_d), os.path.basename(fname), "(cached)")
                     else:
-                        outputstr = "%-50s\t%-s" % (self.format_output(str(localhash), self.options_d), 
+                        outputstr = "%-50s\t%-s\t" % (self.format_output(str(localhash), self.options_d), 
                             os.path.basename(fname))
                     
                     logging.debug(outputstr + "[" + str(threading.currentThread().getName()) + "]")
                 else: 
-                    error_text =  "\n!!!!!!!!!!!!!! ERROR: Could not read file: " + fname
-                    logging.error(error_text)
+                    logging.error("\n!!!!!!!!!!!!!! ERROR: Could not read file: " + fname)
 
             except KeyboardInterrupt:
                 logging.debug("Keyboard interrupt during processing of files. Exiting")
@@ -413,7 +413,6 @@ class epsig2():
                                 cachedhit = epsig2.checkCacheFilename_BNK(self, fp, self.seed, str(row['type']).upper())
                                 
                                 if cachedhit != None:
-                                    # logging.debug("Cached hit!: " + cachedhit)
                                     localhash = cachedhit
                                 else: 
                                     new_cache_list = list()
@@ -540,14 +539,15 @@ class epsig2():
             with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
                 future.append(executor.submit(self.dobnk, fname, chunks))
             # h = self.dobnk(fname, chunks)
-        elif fname.upper().endswith(".BIN"): 
+        #elif fname.upper().endswith(".BIN"): 
+        else:
             with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
                 future.append(executor.submit(self.dobin, fname, chunks))
             # h = self.dobin(fname, chunks)
-        else: 
-            logging.error("unknown file type selected: " + fname)
-            messagebox.showerror("Invalid files selected", "Please select either .BNK or .BIN files only")
-            return 
+        #else: 
+        #    logging.error("unknown file type selected: " + fname)
+        #    messagebox.showerror("Invalid files selected", "Please select either .BNK or .BIN files only")
+        #    return 
 
         for x in as_completed(future): 
             # time.sleep(1) 
@@ -581,9 +581,9 @@ class Seed():
         if hash_type in valid_hash_types: 
             self.seed = self.getSeed(seed)
             logging.warning("Seed Modifed to: " + self.seed)
-
         else:
-            self.seed = seed
+            self.seed = None
+            return -1
 
 
     def getSeed(self, s): 
@@ -667,7 +667,7 @@ class epsig2_gui(threading.Thread):
             tmp_seed = self.combobox_SelectSeed.get()
 
         self.seed = Seed(tmp_seed, self.selectedHashtype.get())
-        logging.warning("Seed Modifed to: " + self.seed.getSeed())
+        logging.warning("Seed Modifed to: " + self.seed.seed)
 
     def gui_getOptions(self): 
         options_d = dict() 
@@ -708,7 +708,7 @@ class epsig2_gui(threading.Thread):
             self.text_BNKoutput.insert(END, "Formatted Result: " + "\n")
 
         # Format seed and XOR/Formatted Result
-        seed_output = epsig2.format_output(self, self.seed.getSeed(), self.gui_getOptions())
+        seed_output = epsig2.format_output(self, self.seed.seed, self.gui_getOptions())
         str_output = epsig2.format_output(self, epsig2_process.xor_result, self.gui_getOptions())
         
         self.text_BNKoutput.insert(END, seed_output + "\t" + str_output + "\t" + os.path.basename(epsig2_process.filepath + "\n"))
@@ -722,14 +722,14 @@ class epsig2_gui(threading.Thread):
         self.GetSeedText() 
 
         if (self.clubs_expected_output.get() == 1):
-            message = "\nQSIM reversed seed to use: " + self.getClubsQSIM_Expected_output(self.seed.getSeed()) + "\n"
+            message = "\nQSIM reversed seed to use: " + self.getClubsQSIM_Expected_output(self.seed.seed) + "\n"
             logging.info(message)
             self.text_BNKoutput.insert(END, message)
 
-        logging.info("Seed is: " + self.seed.getSeed() + " length is: " + str(len(self.seed.getSeed())))
+        logging.info("Seed is: " + self.seed.seed + " length is: " + str(len(self.seed.seed)))
 
         # create process for hashing a file 
-        my_p = epsig2(self.seed.getSeed(), filepath, self.gui_getOptions(), self.cache_dict, str(self.selectedHashtype.get())) 
+        my_p = epsig2(self.seed.seed, filepath, self.gui_getOptions(), self.cache_dict, str(self.selectedHashtype.get())) 
         #futures.append(pool.submit(my_p.processfile, filepath, MAXIMUM_BLOCKSIZE_TO_READ)) # add processs to threadpool
 
         # update dict() 
@@ -747,11 +747,30 @@ class epsig2_gui(threading.Thread):
         # t.start()
         # xor_result = self.processfile(filepath, MAXIMUM_BLOCKSIZE_TO_READ)
     
+    def verifyFileExists(self, f):
+        if f.endswith(".BNK"): 
+            with open(f, 'r') as infile: 
+                fdname = ['fname', 'type', 'blah']
+                reader = csv.DictReader(infile, delimiter=' ', fieldnames = fdname)
+                for row in reader: 
+                    path = os.path.dirname(f)
+                    fp = os.path.join(path, str(row['fname'])) # can't use: os.path.join(self.mandir, str(row['fname'])), as the Cache expects "/"
+                    if not os.path.isfile(fp): 
+                        msg = "**** ERROR: " + fp + " cannot be read from disk"
+                        logging.error(msg)                        
+                        return False    
+        else: 
+            if not os.path.isfile(f): 
+                return False    
+
+        return True
+
+
     def handleButtonPress(self, myButtonPress):
         
         if myButtonPress == '__selected_bnk_file__':
             if (os.name == 'nt'): # Windows OS
-                tmp = filedialog.askopenfilenames(initialdir='G:\OLGR-TECHSERV\BINIMAGE')
+                tmp = filedialog.askopenfilenames(initialdir='G:/OLGR-TECHSERV/BINIMAGE')
             elif (os.name == 'posix'): # Linux OS
                 tmp = filedialog.askopenfilenames(initialdir='.')
             else: 
@@ -765,6 +784,11 @@ class epsig2_gui(threading.Thread):
                     self.bnk_filename_list.append(fname_basename)
                     self.textfield_SelectedBNK.insert(0, fname_basename + "; ")
                     
+                    if not self.verifyFileExists(fname):
+                        msg = "**** ERROR: " + fname + " cannot be read check contents"
+                        self.text_BNKoutput.insert(END, msg)
+                        logging.error(msg)
+
         elif myButtonPress == '__start__':
             if len(self.filelist) > 0: 
            
