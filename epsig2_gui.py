@@ -205,7 +205,14 @@ class epsig2():
         logging.basicConfig(level=logging.DEBUG, format=' %(asctime)s - %(levelname)s- %(message)s')
 
         self.seed = seed 
-        self.filepath = filepath
+
+        if not self.verifyFileExists(filepath):
+            msg = "**** ERROR: " + filepath + " had errors while reading file contents"
+            logging.error(msg)
+            return None
+        else: 
+            self.filepath = filepath
+
         self.options_d = options_d
         self.mandir = os.path.dirname(self.filepath)
         self.cache_dict = dict()
@@ -215,6 +222,24 @@ class epsig2():
         self.selectedHashtype = hash_type_str
 
         self.processfile(self.filepath, chunks=8192) 
+
+    def verifyFileExists(self, f):
+        if f.endswith(".BNK"): 
+            with open(f, 'r') as infile: 
+                fdname = ['fname', 'type', 'blah']
+                reader = csv.DictReader(infile, delimiter=' ', fieldnames = fdname)
+                for row in reader: 
+                    path = os.path.dirname(f)
+                    fp = os.path.join(path, str(row['fname'])) # can't use: os.path.join(self.mandir, str(row['fname'])), as the Cache expects "/"
+                    if not os.path.isfile(fp): 
+                        msg = "**** ERROR: " + fp + " cannot be read from disk"
+                        logging.error(msg)                        
+                        return False    
+        else: 
+            if not os.path.isfile(f): 
+                return False    
+
+        return True
 
     # returns Hashstring or None (if faiiled)
     def checkCacheFilename(self, filename, seed_input, alg_input): # alg_input 

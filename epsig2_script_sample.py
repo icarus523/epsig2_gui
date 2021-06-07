@@ -3,7 +3,11 @@ from epsig2_gui import epsig2, Seed
 def main():
     # Set Input Options
     hash_type = "HMAC-SHA1"                         # valid type: "HMAC-SHA1", "HMAC-SHA256"
-    bnk_or_bin_file = "bnkfiles/5D81F_W4QLQ05M.BNK"         # set complete path, e.g.: """G:\OLGR-TECHSERV\BINIMAGE\AGT\GDQL163A_1I6A_003.bnk"""
+    
+    # set complete path, e.g.: """G:\OLGR-TECHSERV\BINIMAGE\AGT\GDQL163A_1I6A_003.bnk"""
+    #bnk_or_bin_file = "bnkfiles/5D81F_W4QLQ05M.BNK"         
+    bnk_or_bin_file = 'G:/OLGR-TECHSERV/BINIMAGE/KONAMI/1645GDXX_393_004.BNK'
+
     seed = "0000000000000000000000000000000000000000000000000000000000000000"   # set appropriate seed, script will adjust size of seed
 
     # Set Output Options
