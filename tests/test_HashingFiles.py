@@ -13,6 +13,7 @@ class test_HashingFiles_file(epsig2GUI_TestClient):
         self.options_d['selectedHashtype'] = hash_type        
         
         myp = epsig2(my_seed.seed, self.bnkfile, self.options_d, self.cache_dict, hash_type)
+        myp.processfile() 
         self.assertEqual(epsig2.format_output(self, myp.xor_result, self.options_d),expected_result)
 
     def test_dobnk_HMAC_SHA256(self): 
@@ -22,6 +23,7 @@ class test_HashingFiles_file(epsig2GUI_TestClient):
         self.options_d['selectedHashtype'] = hash_type        
 
         myp = epsig2(my_seed.seed, self.bnkfile, self.options_d, self.cache_dict, hash_type)
+        myp.processfile() 
         expected_result = '000000000000000000000000FC1FE2617F2B5EF0C0652FB8D1345738782E6468'
         self.assertEqual(epsig2.format_output(self, myp.xor_result, self.options_d),expected_result)
 
@@ -34,6 +36,7 @@ class test_HashingFiles_file(epsig2GUI_TestClient):
         self.options_d['selectedHashtype'] = hash_type        
 
         myp = epsig2(my_seed.seed, self.binfile, self.options_d, self.cache_dict, hash_type)
+        myp.processfile()         
         self.assertEqual(epsig2.format_output(self, myp.xor_result, self.options_d),expected_result)
 
     def test_dobin_HMAC_SHA256(self): 
@@ -43,6 +46,8 @@ class test_HashingFiles_file(epsig2GUI_TestClient):
         self.options_d['selectedHashtype'] = hash_type        
 
         myp = epsig2(my_seed.seed, self.binfile, self.options_d, self.cache_dict, hash_type)
+        myp.processfile() 
+        
         expected_result = '92971BEB3F6D486BDB86402E8E9E2C726D1173D7999F3F7188F3884663181FF0'
         self.assertEqual(epsig2.format_output(self, myp.xor_result, self.options_d),expected_result)
 

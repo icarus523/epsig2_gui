@@ -8,3 +8,4 @@ epsig2_cachefile_test_empty.json
 *.sigs
 *.bnk
 *.img
+*.txt

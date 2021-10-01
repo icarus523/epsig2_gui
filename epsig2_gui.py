@@ -48,11 +48,13 @@
 #           - seed is automatically padded/truncated automatically based on Hash-Type selected
 #       - Add support to BIN hashing (SG Gaming's ArgOS)
 #       - Add support to paste a complete path in the BNK/BIN file text edit field (for Bang's processes)
-#       - Now includes unit tests, to exercise the functions being utilised
+#       - Now includes unit tests, to excercise the functions being utilised
 #       - Output to Output Field, has been changed to the format: <SEED>/t<HASH>/t<FNAME> - 
 #       - GUI has been standardised: button sizes, padding, relief, etc.
-# v1.5b - add check for when contents of BNK file does not exist in expected path
-# 
+# v1.6  - utilise epsig.exe as a sanity check. 
+#       - test for spaces in BNK file names
+#       - test for other incorrect BNK file formats
+
 import os
 import sys
 import csv
@@ -72,6 +74,8 @@ import threading
 import time 
 import concurrent.futures
 import atexit
+import re
+import subprocess
 
 from tkinter import *
 from tkinter import messagebox
@@ -87,6 +91,7 @@ TEST=True
 
 EPSIG_LOGFILE = "epsig2.log"
 MAXIMUM_BLOCKSIZE_TO_READ = 65535
+ACCEPTABLE_HASH_ALGORITHMS = ['CR16', 'CR32','PS32','PS16','OA4F','OA4R','SHA1']
 
 if TEST: 
     DEFAULT_CACHE_FILE="epsig2_cachefile_v3.json"
@@ -96,6 +101,29 @@ else:
 DEFAULT_STR_LBL_SEED_FILE = "Details of Seed File: <No SL1/MSL Seed File Selected>"
 
 p_reset = "\x08"*8
+
+class BNKEntry:
+    # helper class for sanitizing BNK file entries
+
+    def __init__(self, line): 
+        self.fields = [i for i in line if i] # remove empty strings
+
+        fields = self.fields
+        assert(len(fields) == 3), fields
+
+        # filenameX The filename+ext of a binary image (max 250 chars and must not contain spaces)
+        assert(len(fields[0]) < 250)
+        assert(" " not in fields[0]), fields[0]
+        self.fname = fields[0] 
+
+        #algX       The hash algorithm designation type to be used for the image.
+        #           Refer to previous list of supported algorithm types & designations.
+        #           Cannot be “BLNK” (i.e. no recursion)            
+        assert(fields[1] in ACCEPTABLE_HASH_ALGORITHMS), fields[1]
+        self.hash_type = fields[1] 
+
+        assert(fields[2] == 'p')
+        self.hash_type = fields[1] 
 
 ## CacheFile class
 class CacheFile(): 
@@ -112,7 +140,6 @@ class CacheFile():
 
     def importCacheFile(self):
         cache_data = dict() # empty
-
         if self.user_cache_file: # Handle User selectable Cache File
             cache_location = self.user_cache_file
         else: 
@@ -203,16 +230,13 @@ class epsig2():
 
     def __init__(self, seed, filepath, options_d, cache_dict, hash_type_str):
         logging.basicConfig(level=logging.DEBUG, format=' %(asctime)s - %(levelname)s- %(message)s')
-
         self.seed = seed 
-
         if not self.verifyFileExists(filepath):
             msg = "**** ERROR: " + filepath + " had errors while reading file contents"
             logging.error(msg)
-            return None
         else: 
             self.filepath = filepath
-
+        
         self.options_d = options_d
         self.mandir = os.path.dirname(self.filepath)
         self.cache_dict = dict()
@@ -221,25 +245,97 @@ class epsig2():
         self.user_cache_file = options_d['usr_cache_file']
         self.selectedHashtype = hash_type_str
 
-        self.processfile(self.filepath, chunks=8192) 
+        # this will delay each file to be checked. 
+        if filepath.upper().endswith('BNK'): 
+            # use Rob's epsig3_7.exe to verify BNK file format
+            epsigexe_output = epsig2.bnkfile_validate_epsigexe(self, filepath, self.seed) # will block
 
-    def verifyFileExists(self, f):
-        if f.endswith(".BNK"): 
-            with open(f, 'r') as infile: 
-                fdname = ['fname', 'type', 'blah']
-                reader = csv.DictReader(infile, delimiter=' ', fieldnames = fdname)
-                for row in reader: 
-                    path = os.path.dirname(f)
-                    fp = os.path.join(path, str(row['fname'])) # can't use: os.path.join(self.mandir, str(row['fname'])), as the Cache expects "/"
-                    if not os.path.isfile(fp): 
-                        msg = "**** ERROR: " + fp + " cannot be read from disk"
-                        logging.error(msg)                        
-                        return False    
-        else: 
-            if not os.path.isfile(f): 
-                return False    
+            if epsigexe_output['returncode'] == True: 
+                for result in epsigexe_output['results']: # log epsig3_7.exe output to log file
+                    logging.info("epsig.exe: " + result) 
+                logging.info("epsig.exe: " + filepath + " format is correct.")   
+            else: 
+                logging.error(filepath + " format Error. The file is not formatted as expected. Check the file contents for errors")
+                # need to provide error dialogue here
 
-        return True
+        # self.processfile(self.filepath, chunks=8192) 
+
+    def bnkfile_validate_epsigexe(self, fname, seed): 
+        epsig_path = 'G:/OLGR-TECHSERV/BINIMAGE/epsig3_7.exe'
+
+        # the following will block
+        proc = subprocess.run([epsig_path, fname, seed], capture_output=True) #stdout=subprocess.PIPE
+        
+        err = proc.stderr.decode('utf-8')
+        stdout = proc.stdout.decode('utf-8').split("\r\n")
+        stdout = [i for i in stdout if i] # remove empty strings 
+        
+        result_l = list() 
+        for row in stdout: 
+            if row.startswith('Hash'): 
+                result_l.append(row)
+
+        rv = dict() 
+        rv['err'] = err
+        rv['stdout'] = stdout
+        rv['results'] = result_l
+        rv['returncode'] = proc.returncode == 0
+
+        return rv
+
+    def verifyFileExists(self, fname): 
+        mandir = os.path.dirname(fname)
+        rv = False
+        with open(fname, 'r', encoding='utf-8') as bnkfile: 
+            f = csv.reader(bnkfile, delimiter=' ')
+            try: 
+                for line in f: 
+                    BNKEntry(line) # parse for errors
+                rv = True
+            except csv.Error as e: 
+                sys.exit('fname %s, line %d: %s' % (fname, f.line_num, e))        
+
+        return rv
+        
+    # def verifyFileExists(self, fname): 
+    #     mandir = os.path.dirname(fname)
+    #     rv = True
+    #     with open(fname, 'r') as infile: 
+    #         fdname = ['fname', 'type', 'blah']
+    #         reader = csv.DictReader(infile, delimiter=' ', fieldnames = fdname)
+
+    #         for row in reader:
+    #             fp = os.path.join(mandir, str(row['fname']))
+                
+    #             if str(row['type']).upper() == 'SHA1' or str(row['type']).upper() == 'SHA256':
+    #                 # check if the file exists
+    #                 if not (os.path.isfile(fp)):
+    #                     msg = "**** ERROR: " + fp + " cannot be read from disk"
+    #                     logging.error(msg)                         
+    #                     rv = False
+    #             else:
+    #                 msg = fp + " is not an expected hash type"
+    #                 logging.error(msg)                                             
+    #                 rv = False
+    #     return rv
+    
+    # def verifyFileExists(self, f):
+        # rv = True
+        # if f.endswith(".BNK"): 
+            # with open(f, 'r') as infile: 
+                # fdname = ['fname', 'type', 'blah']
+                # reader = csv.DictReader(infile, delimiter=' ', fieldnames = fdname)
+                # for row in reader: 
+                    # path = os.path.dirname(f)
+                    # fp = os.path.join(path, str(row['fname'])) # can't use: os.path.join(self.mandir, str(row['fname'])), as the Cache expects "/"
+                    # if not os.path.isfile(fp): 
+                        # msg = "**** ERROR: " + fp + " cannot be read from disk"
+                        # logging.error(msg)                        
+                        # rv = False   
+        # else: 
+            # if not os.path.isfile(f): 
+                # rv= False
+        # return rv
 
     # returns Hashstring or None (if faiiled)
     def checkCacheFilename(self, filename, seed_input, alg_input): # alg_input 
@@ -397,6 +493,7 @@ class epsig2():
 
         return oh # { 'oh': oh, 'cache_dict' : self.cache_dict, 'rv': self.LogOutput ,'filename' : fname} 
 
+
     # limitations: currently only supports bnk file with SHA1 contents        
     def dobnk(self, fname, blocksize):
         #time.sleep(1)
@@ -425,6 +522,7 @@ class epsig2():
                     reader = csv.DictReader(infile, delimiter=' ', fieldnames = fdname)
 
                     # logging.debug("%-50s\tSEED" % (self.format_output(self.seed, self.options_d)))
+
                     #futures = list() 
                     #pool = ThreadPoolExecutor(5) # 5 threads max
 
@@ -438,6 +536,7 @@ class epsig2():
                                 cachedhit = epsig2.checkCacheFilename_BNK(self, fp, self.seed, str(row['type']).upper())
                                 
                                 if cachedhit != None:
+                                    # logging.debug("Cached hit!: " + cachedhit)
                                     localhash = cachedhit
                                 else: 
                                     new_cache_list = list()
@@ -554,8 +653,9 @@ class epsig2():
         tmpstr = text[:8] # Returns from the beginning to position 8 of uppercase text
         return "".join(reversed([tmpstr[i:i+2] for i in range(0, len(tmpstr), 2)]))
 
-    def processfile(self, fname, chunks):
+    def processfile(self,chunks=8192):
         # time.sleep(1) 
+        fname=self.filepath
         h = None
         do_output = None
         
@@ -601,7 +701,6 @@ class Seed():
 
     def __init__(self, seed, hash_type):
         self.hash_type = hash_type 
-
         valid_hash_types = ['HMAC-SHA256', 'HMAC-SHA1']
         if hash_type in valid_hash_types: 
             self.seed = self.getSeed(seed)
@@ -609,7 +708,6 @@ class Seed():
         else:
             self.seed = None
             return -1
-
 
     def getSeed(self, s): 
         output_str = ''
@@ -626,6 +724,7 @@ class Seed():
             output_str = s[:40] 
         else: 
             return s
+
 
         return output_str
 
@@ -756,7 +855,7 @@ class epsig2_gui(threading.Thread):
         # create process for hashing a file 
         my_p = epsig2(self.seed.seed, filepath, self.gui_getOptions(), self.cache_dict, str(self.selectedHashtype.get())) 
         #futures.append(pool.submit(my_p.processfile, filepath, MAXIMUM_BLOCKSIZE_TO_READ)) # add processs to threadpool
-
+        my_p.processfile()
         # update dict() 
         self.cache_dict = self.merge_two_dicts(self.cache_dict, my_p.cache_dict)
 
@@ -772,25 +871,6 @@ class epsig2_gui(threading.Thread):
         # t.start()
         # xor_result = self.processfile(filepath, MAXIMUM_BLOCKSIZE_TO_READ)
     
-    def verifyFileExists(self, f):
-        if f.endswith(".BNK"): 
-            with open(f, 'r') as infile: 
-                fdname = ['fname', 'type', 'blah']
-                reader = csv.DictReader(infile, delimiter=' ', fieldnames = fdname)
-                for row in reader: 
-                    path = os.path.dirname(f)
-                    fp = os.path.join(path, str(row['fname'])) # can't use: os.path.join(self.mandir, str(row['fname'])), as the Cache expects "/"
-                    if not os.path.isfile(fp): 
-                        msg = "**** ERROR: " + fp + " cannot be read from disk"
-                        logging.error(msg)                        
-                        return False    
-        else: 
-            if not os.path.isfile(f): 
-                return False    
-
-        return True
-
-
     def handleButtonPress(self, myButtonPress):
         
         if myButtonPress == '__selected_bnk_file__':
@@ -809,18 +889,18 @@ class epsig2_gui(threading.Thread):
                     self.bnk_filename_list.append(fname_basename)
                     self.textfield_SelectedBNK.insert(0, fname_basename + "; ")
                     
-                    if not self.verifyFileExists(fname):
+                    if not epsig2.verifyFileExists(self, fname):
                         msg = "**** ERROR: " + fname + " cannot be read check contents"
                         self.text_BNKoutput.insert(END, msg)
                         logging.error(msg)
-
+        
         elif myButtonPress == '__start__':
             if len(self.filelist) > 0: 
            
                 for filepath in self.filelist:
                     logging.info("Processing: " + filepath)
-                    if (os.path.isfile(filepath)):                 
-                        self.startEpsig2GUI(filepath)
+                    if (os.path.isfile(filepath)):  
+                        self.startEpsig2GUI(filepath)                            
                     else: 
                         logging.warning(filepath + " does not exist")
                         messagebox.showerror(filepath + " does not exist", "Error in file selection")
@@ -1226,4 +1306,3 @@ def main():
         sys.exit(0)
 
 if __name__ == "__main__": main()
-
