@@ -125,6 +125,10 @@ class BNKEntry:
         assert(fields[2] == 'p')
         self.hash_type = fields[1] 
 
+    def toJSON(self): 
+        return (json.dumps(self, default=lambda o: o.__dict__, sort_keys = True, indent=4))
+
+
 ## CacheFile class
 class CacheFile(): 
 
@@ -234,9 +238,9 @@ class epsig2():
         if not self.verifyFileExists(filepath):
             msg = "**** ERROR: " + filepath + " had errors while reading file contents"
             logging.error(msg)
-        else: 
-            self.filepath = filepath
-        
+
+        self.filepath = filepath
+    
         self.options_d = options_d
         self.mandir = os.path.dirname(self.filepath)
         self.cache_dict = dict()
@@ -250,7 +254,7 @@ class epsig2():
             # use Rob's epsig3_7.exe to verify BNK file format
             epsigexe_output = epsig2.bnkfile_validate_epsigexe(self, filepath, self.seed) # will block
 
-            if epsigexe_output['returncode'] == True: 
+            if epsigexe_output and epsigexe_output['returncode'] == True: 
                 for result in epsigexe_output['results']: # log epsig3_7.exe output to log file
                     logging.info("epsig.exe: " + result) 
                 logging.info("epsig.exe: " + filepath + " format is correct.")   
@@ -262,6 +266,9 @@ class epsig2():
 
     def bnkfile_validate_epsigexe(self, fname, seed): 
         epsig_path = 'G:/OLGR-TECHSERV/BINIMAGE/epsig3_7.exe'
+        if not os.path.isfile(epsig_path):
+            print("epsig.exe cannot be found in: " + epsig_path)
+            return None
 
         # the following will block
         proc = subprocess.run([epsig_path, fname, seed], capture_output=True) #stdout=subprocess.PIPE
@@ -286,14 +293,19 @@ class epsig2():
     def verifyFileExists(self, fname): 
         mandir = os.path.dirname(fname)
         rv = False
-        with open(fname, 'r', encoding='utf-8') as bnkfile: 
-            f = csv.reader(bnkfile, delimiter=' ')
-            try: 
-                for line in f: 
-                    BNKEntry(line) # parse for errors
-                rv = True
-            except csv.Error as e: 
-                sys.exit('fname %s, line %d: %s' % (fname, f.line_num, e))        
+        if os.path.isfile(fname) and fname.endswith(".BNK"): 
+            with open(fname, 'r', encoding='utf-8') as bnkfile: 
+                f = csv.reader(bnkfile, delimiter=' ')
+                try: 
+                    for line in f: 
+                        BNKEntry(line) # parse for errors
+                    rv = True
+                except csv.Error as e: 
+                    sys.exit('fname %s, line %d: %s' % (fname, f.line_num, e))        
+        elif os.path.isfile(fname): 
+            rv = True
+        else: 
+            return False
 
         return rv
         
@@ -600,7 +612,7 @@ class epsig2():
                                         str(row['fname']))
                                 
                                 logging.debug(outputstr + "[" + str(threading.currentThread().getName()) + "]")
-                                # self.output.append(outputstr)
+                                # self.outxput.append(outputstr)
                                 
                             else: 
                                 error_text =  "\n!!!!!!!!!!!!!! ERROR: Could not read file: " + str(row['fname']) + " in: " + fname + "\n\n"
@@ -618,6 +630,10 @@ class epsig2():
                 logging.debug("Keyboard interrupt during processing of files. Exiting")
                 #sys.exit(1)
                 return -1
+
+            except FileNotFoundError: 
+                logging.error("Could not read file: " + fname)
+
             
         return oh # { 'oh': oh } , 'cache_dict' : self.cache_dict, 'rv': self.LogOutput ,'filename' : fname} 
     
