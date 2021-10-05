@@ -1,6 +1,11 @@
 
+*.pyc
 *.log
-
-*.json
-
+epsig2_cachefile_v3.json
+epsig2_cachefile_test_empty.sigs
+epsig2_cachefile_v3.sigs
+epsig2_cachefile_test_empty.json
 *.sigs
+*.bnk
+*.img
+*.txt
