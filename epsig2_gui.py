@@ -85,7 +85,7 @@ from threading import Thread
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, wait, as_completed
 
-VERSION = "1.5"
+VERSION = "1.6"
 
 TEST=True
 
@@ -102,6 +102,7 @@ DEFAULT_STR_LBL_SEED_FILE = "Details of Seed File: <No SL1/MSL Seed File Selecte
 
 p_reset = "\x08"*8
 
+## BNKEntry class
 class BNKEntry:
     # helper class for sanitizing BNK file entries
 
@@ -127,7 +128,6 @@ class BNKEntry:
 
     def toJSON(self): 
         return (json.dumps(self, default=lambda o: o.__dict__, sort_keys = True, indent=4))
-
 
 ## CacheFile class
 class CacheFile(): 
@@ -232,15 +232,11 @@ class CacheFile():
 ## Main epsig2 class
 class epsig2():
 
-    def __init__(self, seed, filepath, options_d, cache_dict, hash_type_str):
+    def __init__(self, seed, filepath, options_d, cache_dict, hash_type_str, epsigexe=True):
         logging.basicConfig(level=logging.DEBUG, format=' %(asctime)s - %(levelname)s- %(message)s')
+        self.verify_with_epsigexe = epsigexe # default this will use epsig.exe to verify BNK files. 
         self.seed = seed 
-        if not self.verifyFileExists(filepath):
-            msg = "**** ERROR: " + filepath + " had errors while reading file contents"
-            logging.error(msg)
-
         self.filepath = filepath
-    
         self.options_d = options_d
         self.mandir = os.path.dirname(self.filepath)
         self.cache_dict = dict()
@@ -250,7 +246,7 @@ class epsig2():
         self.selectedHashtype = hash_type_str
 
         # this will delay each file to be checked. 
-        if filepath.upper().endswith('BNK'): 
+        if filepath.upper().endswith('BNK') and self.verify_with_epsigexe: 
             # use Rob's epsig3_7.exe to verify BNK file format
             epsigexe_output = epsig2.bnkfile_validate_epsigexe(self, filepath, self.seed) # will block
 
@@ -259,15 +255,25 @@ class epsig2():
                     logging.info("epsig.exe: " + result) 
                 logging.info("epsig.exe: " + filepath + " format is correct.")   
             else: 
-                logging.error(filepath + " format Error. The file is not formatted as expected. Check the file contents for errors")
+                logging.error("epsig.exe: " + os.path.basename(filepath) + " format Error. The file is not formatted as expected. Check the file contents for errors")
                 # need to provide error dialogue here
+                self.filepath = None
+
+        else: 
+            if not self.verifyFileExists(self.filepath):
+                msg = "**** ERROR: " + self.filepath + " had errors while reading file contents"
+                logging.error(msg)
 
         # self.processfile(self.filepath, chunks=8192) 
 
     def bnkfile_validate_epsigexe(self, fname, seed): 
         epsig_path = 'G:/OLGR-TECHSERV/BINIMAGE/epsig3_7.exe'
         if not os.path.isfile(epsig_path):
-            print("epsig.exe cannot be found in: " + epsig_path)
+            logging.error("epsig.exe cannot be found in: " + epsig_path)
+            return None
+
+        if ' ' in os.path.basename(fname): 
+            logging.error("no spaces allowed in filename: " + os.path.basename(fname))
             return None
 
         # the following will block
@@ -675,43 +681,44 @@ class epsig2():
         h = None
         do_output = None
         
-        future = list()
-        if fname.upper().endswith(".BNK"): 
-            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-                future.append(executor.submit(self.dobnk, fname, chunks))
-            # h = self.dobnk(fname, chunks)
-        #elif fname.upper().endswith(".BIN"): 
-        else:
-            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-                future.append(executor.submit(self.dobin, fname, chunks))
-            # h = self.dobin(fname, chunks)
-        #else: 
-        #    logging.error("unknown file type selected: " + fname)
-        #    messagebox.showerror("Invalid files selected", "Please select either .BNK or .BIN files only")
-        #    return 
-
-        for x in as_completed(future): 
-            # time.sleep(1) 
-            h = x.result()                    
-
-            if h == -1: 
-                return # handle error in seed input
+        if fname: 
+            future = list()
+            if fname.upper().endswith(".BNK"): 
+                with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                    future.append(executor.submit(self.dobnk, fname, chunks))
+                # h = self.dobnk(fname, chunks)
+            #elif fname.upper().endswith(".BIN"): 
             else:
-                # self.text_BNKoutput.insert(END, "%-50s\t%s\n" % (str(h).zfill(40), "RAW output"))
-                # raw_outputstr = "%-50s\t%s" % (str(h).zfill(40), "RAW output")
-                # logging.debug(raw_outputstr + "\t[" + str(threading.currentThread().getName()) + "]")
-                # self.output.append(raw_outputstr)
+                with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                    future.append(executor.submit(self.dobin, fname, chunks))
+                # h = self.dobin(fname, chunks)
+            #else: 
+            #    logging.error("unknown file type selected: " + fname)
+            #    messagebox.showerror("Invalid files selected", "Please select either .BNK or .BIN files only")
+            #    return 
 
-                #### 
-                # processfile must occur before any reads to self.xor_result!!  
-                self.xor_result = h
-                #### 
+            for x in as_completed(future): 
+                # time.sleep(1) 
+                h = x.result()                    
 
-                outputstr = "%-50s" % (str(self.format_output(str(h), self.options_d)))
-                if fname.upper().endswith(".BNK"): 
-                    logging.debug(outputstr + "\tXOR Formatted Result" + "\t [" + str(threading.currentThread().getName()) + "]")
-                else: 
-                    logging.debug(outputstr + "\tFormatted Result" + "\t [" + str(threading.currentThread().getName()) + "]")
+                if h == -1: 
+                    return # handle error in seed input
+                else:
+                    # self.text_BNKoutput.insert(END, "%-50s\t%s\n" % (str(h).zfill(40), "RAW output"))
+                    # raw_outputstr = "%-50s\t%s" % (str(h).zfill(40), "RAW output")
+                    # logging.debug(raw_outputstr + "\t[" + str(threading.currentThread().getName()) + "]")
+                    # self.output.append(raw_outputstr)
+
+                    #### 
+                    # processfile must occur before any reads to self.xor_result!!  
+                    self.xor_result = h
+                    #### 
+
+                    outputstr = "%-50s" % (str(self.format_output(str(h), self.options_d)))
+                    if fname.upper().endswith(".BNK"): 
+                        logging.debug(outputstr + "\tXOR Formatted Result" + "\t [" + str(threading.currentThread().getName()) + "]")
+                    else: 
+                        logging.debug(outputstr + "\tFormatted Result" + "\t [" + str(threading.currentThread().getName()) + "]")
 
 class Seed(): 
 
@@ -829,29 +836,31 @@ class epsig2_gui(threading.Thread):
     def updateGUI(self, epsig2_process): 
         # update main text area window
         #     def format_output(self, inputstr, options_d):
-
-        # Display Filename to be processed
-        self.text_BNKoutput.insert(END, "\nProcessing: " + epsig2_process.filepath + "\n")
-
-        if epsig2_process.filepath.upper().endswith('.BNK'): 
-            # Display BNK details
-            for hash_result in epsig2_process.LogOutput: 
-                # bnk_details_hash_output = hash_result['seed'] + "\t" + hash_result['hash'] + "\t" + hash_result['filename']
-                seed_str = epsig2.format_output(self, hash_result['seed'], self.gui_getOptions())
-                hash_str = epsig2.format_output(self, hash_result['hash'], self.gui_getOptions())
+        if epsig2_process.filepath:
+            if epsig2_process.filepath.upper().endswith('.BNK'): 
+                # Display Filename to be processed
+                self.text_BNKoutput.insert(END, "\nProcessing: " + epsig2_process.filepath + "\n")            
+                # Display BNK details
+                for hash_result in epsig2_process.LogOutput: 
+                    # bnk_details_hash_output = hash_result['seed'] + "\t" + hash_result['hash'] + "\t" + hash_result['filename']
+                    seed_str = epsig2.format_output(self, hash_result['seed'], self.gui_getOptions())
+                    hash_str = epsig2.format_output(self, hash_result['hash'], self.gui_getOptions())
+                    
+                    bnk_details_hash_output = seed_str + "\t" + hash_str + "\t" + hash_result['filename']
+                    self.text_BNKoutput.insert(END, bnk_details_hash_output + "\n")
                 
-                bnk_details_hash_output = seed_str + "\t" + hash_str + "\t" + hash_result['filename']
-                self.text_BNKoutput.insert(END, bnk_details_hash_output + "\n")
-            
-            self.text_BNKoutput.insert(END, "XOR Result: " + "\n")
+                self.text_BNKoutput.insert(END, "XOR Result: " + "\n")
+            else: 
+                self.text_BNKoutput.insert(END, "Formatted Result: " + "\n")
         else: 
-            self.text_BNKoutput.insert(END, "Formatted Result: " + "\n")
+            self.text_BNKoutput.insert(END, "Invalid file - error in file/filename format.\n")
 
         # Format seed and XOR/Formatted Result
         seed_output = epsig2.format_output(self, self.seed.seed, self.gui_getOptions())
         str_output = epsig2.format_output(self, epsig2_process.xor_result, self.gui_getOptions())
         
-        self.text_BNKoutput.insert(END, seed_output + "\t" + str_output + "\t" + os.path.basename(epsig2_process.filepath + "\n"))
+        if epsig2_process.filepath: 
+            self.text_BNKoutput.insert(END, seed_output + "\t" + str_output + "\t" + os.path.basename(epsig2_process.filepath + "\n"))
 
     def startEpsig2GUI(self, filepath): 
         #futures = list() 
@@ -879,7 +888,7 @@ class epsig2_gui(threading.Thread):
 
     #    def writetoLogfile(self, filename, xor_result, bnkfile, multi_logf):
 
-        if self.writetolog.get() == 1: 
+        if self.writetolog.get() == 1 and my_p.filepath: 
             self.writetoLogfile(EPSIG_LOGFILE, my_p, filepath, self.logtimestamp.get() == 1)
 
         # Create and launch a thread 
