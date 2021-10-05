@@ -12,3 +12,5 @@ class test_cache_functions_file(epsig2GUI_TestClient):
 
 		self.assertEqual(test_cache_file.cache_dict, {})
 
+	def test_expected_import_cache(self): 
+		fname = "epsig2_cachefile_test "
