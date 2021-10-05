@@ -40,6 +40,7 @@
 #        - add option to display flipped bits for Seed in Console Log as an option.
 #          (request by D### N#####)
 #        - Update json signature file verifications to use SHA256
+# v1.4.3 - Exits out when BNK file does not exist.
 # v1.4.4 - was here somewhere
 # v1.5  - separate epsig2 class (for use with: from epsig2_gui import epsig2)
 #       - separate Cache File as a separate class
@@ -631,7 +632,6 @@ class epsig2():
                             return -1
                             # Need to implement CR16, CR32, PS32, PS16, OA4F and OA4R, and SHA256 if need be. 
 
-
             except KeyboardInterrupt:
                 logging.debug("Keyboard interrupt during processing of files. Exiting")
                 #sys.exit(1)
@@ -929,7 +929,6 @@ class epsig2_gui(threading.Thread):
                     else: 
                         logging.warning(filepath + " does not exist")
                         messagebox.showerror(filepath + " does not exist", "Error in file selection")
-
             else:
                 # try reading the text box if file exits: 
                 tmp_fname = self.textfield_SelectedBNK.get() 
@@ -1036,7 +1035,6 @@ class epsig2_gui(threading.Thread):
             self.combobox_SelectSeed['values'] = self.processsl1file(fname)
         else:
             messagebox.showerror("Expected SL1 or MSL file to Process", fname + " is not a valid seed file")
-            # sys.exit(1)                 
 
     def aboutwindow(self):
         about_script = "Version: v" + VERSION + " by aceretjr\n Python3 script for processing BNK and BIN files."
@@ -1047,6 +1045,7 @@ class epsig2_gui(threading.Thread):
 
     def seed_selection(self):
         print(self.box_value.get())
+
 
     def setupGUI(self):
         self.root.wm_title("epsig2 BNK/BIN file hashing tool v" + VERSION)
@@ -1087,6 +1086,7 @@ class epsig2_gui(threading.Thread):
         frame_bnkSelectionFrame.pack(side = TOP, padx  = 3, pady = 3, expand = False, fill=X, anchor = 'w')       
 
         button_SelectedBNKfile = ttk.Button(frame_bnkSelectionFrame, text = "Select BNK/BIN file...", width=20, 
+
                                                       command = lambda: self.handleButtonPress('__selected_bnk_file__'))                                             
         button_SelectedBNKfile.pack(side=LEFT, padx = 3, pady = 3, fill=X, expand=False)
         
@@ -1101,6 +1101,7 @@ class epsig2_gui(threading.Thread):
  
         frame_SelectSeed = ttk.Frame(frame_toparea)
         frame_SelectSeed.config(relief= None, borderwidth = 2)
+
         frame_SelectSeed.pack(side=TOP, fill=X, padx = 3, pady = 3, expand=True)
 
         # Button Selected Seed file (sl1)
@@ -1133,6 +1134,7 @@ class epsig2_gui(threading.Thread):
         # Text Label sl1 location
         self.label_SeedPath = ttk.Label(frame_toparea, 
             text = DEFAULT_STR_LBL_SEED_FILE, width = 80)
+
         self.label_SeedPath.pack(side=BOTTOM, fill=X, padx = 3, pady = 3, expand=True)
         
         ######################### MIDDLE FRAME

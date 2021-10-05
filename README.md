@@ -41,8 +41,7 @@ Where:-
     oa40227a.bin OA4R p  
     sc0130b1.bin OA4F p  
 
-
- ### v1.5
+### v1.5
  - separate epsig2 class (for use with: from epsig2_gui import epsig2)
  - separate Cache File as a separate class
  - By Default, a File Cache is now used as the OS can manage the resource being used
