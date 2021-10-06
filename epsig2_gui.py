@@ -778,6 +778,36 @@ class epsig2_gui(threading.Thread):
 
         Thread(self.setupGUI()).start()        
 
+    def dobnkfile(self, fname, seed): 
+        epsig_path = 'G:/OLGR-TECHSERV/BINIMAGE/epsig3_7.exe'
+        if not os.path.isfile(epsig_path):
+            logging.error("epsig.exe cannot be found in: " + epsig_path)
+            return None
+
+        if ' ' in os.path.basename(fname): 
+            logging.error("no spaces allowed in filename: " + os.path.basename(fname))
+            return None
+
+        # the following will block
+        proc = subprocess.run([epsig_path, fname, seed], capture_output=True) #stdout=subprocess.PIPE
+        
+        err = proc.stderr.decode('utf-8')
+        stdout = proc.stdout.decode('utf-8').split("\r\n")
+        stdout = [i for i in stdout if i] # remove empty strings 
+        
+        result_l = list() 
+        for row in stdout: 
+            if row.startswith('Hash'): 
+                result_l.append(row)
+
+        rv = dict() 
+        rv['err'] = err
+        rv['stdout'] = stdout
+        rv['results'] = result_l
+        rv['returncode'] = proc.returncode == 0
+
+        return rv
+
     def writetoLogfile(self, filename, epsig2_p, bnkfile, multi_logf):
         timestamp = datetime.timestamp(datetime.now())
         outputfile = ''
@@ -876,31 +906,50 @@ class epsig2_gui(threading.Thread):
         self.mandir = os.path.dirname(filepath)
 
         self.GetSeedText() 
+        epsigexe_output = self.dobnkfile(filepath, self.seed.seed)
 
-        if (self.clubs_expected_output.get() == 1):
-            message = "\nQSIM reversed seed to use: " + self.getClubsQSIM_Expected_output(self.seed.seed) + "\n"
-            logging.info(message)
-            self.text_BNKoutput.insert(END, message)
+        if epsigexe_output and epsigexe_output['returncode'] == True: 
+            for result in epsigexe_output['results']: # log epsig3_7.exe output to log file
+                logging.info("epsig.exe: " + result) 
+            logging.info("epsig.exe: " + filepath + " format is correct.")   
+        else: 
+            logging.error("epsig.exe: " + os.path.basename(filepath) + " format Error. The file is not formatted as expected. Check the file contents for errors")
+            # need to provide error dialogue here
+            self.filepath = None
 
-        logging.info("Seed is: " + self.seed.seed + " length is: " + str(len(self.seed.seed)))
 
-        if self.epsigexe.get() == 1: 
-            # create process for hashing a file 
-            my_p = epsig2(self.seed.seed, filepath, self.gui_getOptions(), self.cache_dict, str(self.selectedHashtype.get())) 
-        else:
-            my_p = epsig2(self.seed.seed, filepath, self.gui_getOptions(), self.cache_dict, str(self.selectedHashtype.get()), False) 
+        self.updateGUI_epsig(epsigexe_output)
 
-        #futures.append(pool.submit(my_p.processfile, filepath, MAXIMUM_BLOCKSIZE_TO_READ)) # add processs to threadpool
-        my_p.processfile()
-        # update dict() 
-        self.cache_dict = self.merge_two_dicts(self.cache_dict, my_p.cache_dict)
+    def updateGUI_epsig(self, output_d): 
+        if output_d['returncode'] == True: 
+            self.text_BNKoutput.insert(END, "\nProcessing: " + self.filepath + "\n")                    
+            self.text_BNKoutput.insert(END, "\n".join(output_d['results']))            
+        else:   
+            self.text_BNKoutput.insert(END, "*** epsig.exe error: " + output_d['err'])
 
-        self.updateGUI(my_p)
+
+        # if (self.clubs_expected_output.get() == 1):
+        #     message = "\nQSIM reversed seed to use: " + self.getClubsQSIM_Expected_output(self.seed.seed) + "\n"
+        #     logging.info(message)
+        #     self.text_BNKoutput.insert(END, message)
+
+        # logging.info("Seed is: " + self.seed.seed + " length is: " + str(len(self.seed.seed)))
+
+        # if self.epsigexe.get() == 1: 
+        #     # create process for hashing a file 
+        #     my_p = epsig2(self.seed.seed, filepath, self.gui_getOptions(), self.cache_dict, str(self.selectedHashtype.get())) 
+        # else:
+        #     my_p = epsig2(self.seed.seed, filepath, self.gui_getOptions(), self.cache_dict, str(self.selectedHashtype.get()), False) 
+
+        # #futures.append(pool.submit(my_p.processfile, filepath, MAXIMUM_BLOCKSIZE_TO_READ)) # add processs to threadpool
+        # my_p.processfile()
+        # # update dict() 
+        # self.cache_dict = self.merge_two_dicts(self.cache_dict, my_p.cache_dict)
 
     #    def writetoLogfile(self, filename, xor_result, bnkfile, multi_logf):
 
-        if self.writetolog.get() == 1 and my_p.filepath: 
-            self.writetoLogfile(EPSIG_LOGFILE, my_p, filepath, self.logtimestamp.get() == 1)
+        # if self.writetolog.get() == 1: 
+        #     self.writetoLogfile(EPSIG_LOGFILE, my_p, filepath, self.logtimestamp.get() == 1)
 
         # Create and launch a thread 
         # t = Thread(group=None, target=my_p.processfile, name=self.bnk_filename, args=(filepath, MAXIMUM_BLOCKSIZE_TO_READ, )) 

@@ -53,3 +53,8 @@ Where:-
  - Now includes unit tests, to excercise the functions being utilised
  - Output to Output Field, has been changed to the format: <SEED>/t<HASH>/t<FNAME> - 
  - GUI has been standardised: padding, relief, etc.
+
+
+### v2.0
+- uses epsig.exe as main engine.
+- the script is now just a wrapper
