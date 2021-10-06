@@ -54,6 +54,7 @@
 # v1.6  - utilise epsig.exe as a sanity check. 
 #       - test for spaces in BNK file names
 #       - test for other incorrect BNK file formats
+#       - Updated GUI to add option to enable/disable epsig.exe file format checks.
 
 import os
 import sys
@@ -87,7 +88,7 @@ from concurrent.futures import ThreadPoolExecutor, wait, as_completed
 
 VERSION = "1.6"
 
-TEST=True
+TEST=True   # This must be changed once released
 
 EPSIG_LOGFILE = "epsig2.log"
 MAXIMUM_BLOCKSIZE_TO_READ = 65535
@@ -110,24 +111,54 @@ class BNKEntry:
         self.fields = [i for i in line if i] # remove empty strings
 
         fields = self.fields
-        assert(len(fields) == 3), fields
+        assert(len(fields) == 3), "Maximum 3 fields"
 
         # filenameX The filename+ext of a binary image (max 250 chars and must not contain spaces)
-        assert(len(fields[0]) < 250)
-        assert(" " not in fields[0]), fields[0]
+        assert(len(fields[0]) < 250), "filename max 250 chars"
+        assert(" " not in fields[0]), "filename must not contain spaces"
         self.fname = fields[0] 
 
         #algX       The hash algorithm designation type to be used for the image.
         #           Refer to previous list of supported algorithm types & designations.
         #           Cannot be “BLNK” (i.e. no recursion)            
-        assert(fields[1] in ACCEPTABLE_HASH_ALGORITHMS), fields[1]
+        assert(fields[1] in ACCEPTABLE_HASH_ALGORITHMS), "unknown hash algorithm"
         self.hash_type = fields[1] 
 
-        assert(fields[2] == 'p')
+        assert(fields[2] == 'p'), "must be a 'p'"
         self.hash_type = fields[1] 
 
     def toJSON(self): 
         return (json.dumps(self, default=lambda o: o.__dict__, sort_keys = True, indent=4))
+
+class Seed(): 
+
+    def __init__(self, seed, hash_type):
+        self.hash_type = hash_type 
+        valid_hash_types = ['HMAC-SHA256', 'HMAC-SHA1']
+        if hash_type in valid_hash_types: 
+            self.seed = self.getSeed(seed)
+            logging.warning("Seed Modifed to: " + self.seed)
+        else:
+            self.seed = None
+            return -1
+
+    def getSeed(self, s): 
+        output_str = ''
+        # need to append '0' to include appropriate length
+        if self.hash_type == 'HMAC-SHA256' and len(s) < 64: 
+            # append
+            output_str = s.ljust(64, '0')
+        elif self.hash_type == 'HMAC-SHA1' and len(s) < 40:
+            output_str = s.ljust(40, '0')
+        elif self.hash_type == 'HMAC-SHA256' and len(s) > 64: 
+            # truncate
+            output_str = s[:64] 
+        elif self.hash_type == 'HMAC-SHA1' and len(s) > 40: 
+            output_str = s[:40] 
+        else: 
+            return s
+
+        return output_str
 
 ## CacheFile class
 class CacheFile(): 
@@ -263,6 +294,9 @@ class epsig2():
             if not self.verifyFileExists(self.filepath):
                 msg = "**** ERROR: " + self.filepath + " had errors while reading file contents"
                 logging.error(msg)
+            else:
+                logging.info("epsig2_gui: " + filepath + " format is correct.")   
+
 
         # self.processfile(self.filepath, chunks=8192) 
 
@@ -304,11 +338,13 @@ class epsig2():
                 f = csv.reader(bnkfile, delimiter=' ')
                 try: 
                     for line in f: 
-                        BNKEntry(line) # parse for errors
+                        logging.info("BNKEntry: " + BNKEntry(line).toJSON()) # parse BNK for errors
                     rv = True
                 except csv.Error as e: 
-                    sys.exit('fname %s, line %d: %s' % (fname, f.line_num, e))        
-        elif os.path.isfile(fname): 
+                    # sys.exit('fname %s, line %d: %s' % (fname, f.line_num, e))  
+                    msg = "*** ERROR: " + fname + " cannot be read from disk"
+                    logging.error(msg)                             
+        elif os.path.isfile(fname): # BIN files and others
             rv = True
         else: 
             return False
@@ -368,18 +404,18 @@ class epsig2():
         
         return None    
 
-    def checkCacheFilename_BNK(self, filename, seed_input, alg_input): # alg_input 
-        # For filename_seed, concatenate to form unique string. 
-        if filename in self.cache_dict.keys(): # a hit?
-            data = self.cache_dict.get(filename) # now a list
-            # print(json.dumps(data, indent=4, sort_keys=True))
-            for item in data:
-                # Check if Seed and Algorithm matches. 
-                if item['seed'] == seed_input and item['alg'] == alg_input: 
-                    # verified_time = item['verify'] 
-                    return(str(item['hash'])) # return Hash result
+    # def checkCacheFilename_BNK(self, filename, seed_input, alg_input): # alg_input 
+    #     # For filename_seed, concatenate to form unique string. 
+    #     if filename in self.cache_dict.keys(): # a hit?
+    #         data = self.cache_dict.get(filename) # now a list
+    #         # print(json.dumps(data, indent=4, sort_keys=True))
+    #         for item in data:
+    #             # Check if Seed and Algorithm matches. 
+    #             if item['seed'] == seed_input and item['alg'] == alg_input: 
+    #                 # verified_time = item['verify'] 
+    #                 return(str(item['hash'])) # return Hash result
         
-        return None  
+    #     return None  
 
     # input: file to be CRC32 
     def dohash_crc32(self, fname):
@@ -551,7 +587,7 @@ class epsig2():
                             if (os.path.isfile(fp)):
 
                                 # The following should return a string if matches or None   
-                                cachedhit = epsig2.checkCacheFilename_BNK(self, fp, self.seed, str(row['type']).upper())
+                                cachedhit = epsig2.checkCacheFilename(self, fp, self.seed, str(row['type']).upper())
                                 
                                 if cachedhit != None:
                                     # logging.debug("Cached hit!: " + cachedhit)
@@ -644,10 +680,11 @@ class epsig2():
         return oh # { 'oh': oh } , 'cache_dict' : self.cache_dict, 'rv': self.LogOutput ,'filename' : fname} 
     
     # Inserts spaces on [text] for every [s_range]
-    def insert_spaces(self, text, s_range):
-        return " ".join(text[i:i+s_range] for i in range(0, len(text), s_range))
+    # def insert_spaces(self, text, s_range):
+    #     return " ".join(text[i:i+s_range] for i in range(0, len(text), s_range))
 
     # Formats inputstr based on options_d dictionary
+    # Note this can be used outside this script. 
     def format_output(self, inputstr, options_d):
         outputstr = ''
 
@@ -659,7 +696,7 @@ class epsig2():
         # include a space for every eight chars
         if (options_d['eightchar'] == True):
             s_range = 8
-            outputstr = " ".join(outputstr[i:i+s_range] for i in range(0, len(outputstr), s_range)) # self.insert_spaces(inputstr, 8)
+            outputstr = " ".join(outputstr[i:i+s_range] for i in range(0, len(outputstr), s_range))
         
         # uppercase
         if options_d['uppercase'] == True: 
@@ -720,36 +757,6 @@ class epsig2():
                     else: 
                         logging.debug(outputstr + "\tFormatted Result" + "\t [" + str(threading.currentThread().getName()) + "]")
 
-class Seed(): 
-
-    def __init__(self, seed, hash_type):
-        self.hash_type = hash_type 
-        valid_hash_types = ['HMAC-SHA256', 'HMAC-SHA1']
-        if hash_type in valid_hash_types: 
-            self.seed = self.getSeed(seed)
-            logging.warning("Seed Modifed to: " + self.seed)
-        else:
-            self.seed = None
-            return -1
-
-    def getSeed(self, s): 
-        output_str = ''
-        # need to append '0' to include appropriate length
-        if self.hash_type == 'HMAC-SHA256' and len(s) < 64: 
-            # append
-            output_str = s.ljust(64, '0')
-        elif self.hash_type == 'HMAC-SHA1' and len(s) < 40:
-            output_str = s.ljust(40, '0')
-        elif self.hash_type == 'HMAC-SHA256' and len(s) > 64: 
-            # truncate
-            output_str = s[:64] 
-        elif self.hash_type == 'HMAC-SHA1' and len(s) > 40: 
-            output_str = s[:40] 
-        else: 
-            return s
-
-
-        return output_str
 
 class epsig2_gui(threading.Thread):
 
@@ -877,8 +884,12 @@ class epsig2_gui(threading.Thread):
 
         logging.info("Seed is: " + self.seed.seed + " length is: " + str(len(self.seed.seed)))
 
-        # create process for hashing a file 
-        my_p = epsig2(self.seed.seed, filepath, self.gui_getOptions(), self.cache_dict, str(self.selectedHashtype.get())) 
+        if self.epsigexe.get() == 1: 
+            # create process for hashing a file 
+            my_p = epsig2(self.seed.seed, filepath, self.gui_getOptions(), self.cache_dict, str(self.selectedHashtype.get())) 
+        else:
+            my_p = epsig2(self.seed.seed, filepath, self.gui_getOptions(), self.cache_dict, str(self.selectedHashtype.get()), False) 
+
         #futures.append(pool.submit(my_p.processfile, filepath, MAXIMUM_BLOCKSIZE_TO_READ)) # add processs to threadpool
         my_p.processfile()
         # update dict() 
@@ -967,6 +978,7 @@ class epsig2_gui(threading.Thread):
                 self.CacheFileButtonText.set(DEFAULT_CACHE_FILE)
                 self.user_cache_file = None
                 self.selectedHashtype.set("HMAC-SHA1")
+                self.epsigexe.set(1) 
                 
         elif myButtonPress == '__clear_cache__':
                 if self.user_cache_file:
@@ -1152,10 +1164,15 @@ class epsig2_gui(threading.Thread):
         self.text_BNKoutput.pack(side=LEFT, fill=BOTH, expand=True)
         
         #Frame for Checkbuttons
-        frame_checkbuttons = ttk.Labelframe(frame_middleframe, text="Output Options")
+        frame_checkbuttons = ttk.Labelframe(frame_middleframe, text="Configurations")
         frame_checkbuttons.pack(side = RIGHT, fill=Y, expand = False)
         frame_checkbuttons.config(relief = RIDGE, borderwidth = 2)
         
+        # Text Label sl1 location
+        self.label_OutputOptions = ttk.Label(frame_checkbuttons, 
+            text = "Display options: ")
+        self.label_OutputOptions.grid(row=1, column=1, sticky='w',)
+
         # Checkbutton Reverse
         self.reverse = IntVar()
         self.reverse.set(0)
@@ -1166,7 +1183,7 @@ class epsig2_gui(threading.Thread):
             variable = self.reverse, 
             onvalue=1, 
             offvalue=0)
-        self.cb_reverse.grid(row=1, column=1, sticky='w')
+        self.cb_reverse.grid(row=2, column=1, sticky='w')
 
         # Checkbutton QSIM expected Seed 
         self.clubs_expected_output = IntVar()
@@ -1178,7 +1195,7 @@ class epsig2_gui(threading.Thread):
             variable = self.clubs_expected_output, 
             onvalue=1, 
             offvalue=0)
-        self.cb_clubs_expected_output.grid(row=2, column=1, sticky='w')
+        self.cb_clubs_expected_output.grid(row=3, column=1, sticky='w')
 
         # Checkbutton Uppercase
         self.uppercase = IntVar()
@@ -1190,7 +1207,7 @@ class epsig2_gui(threading.Thread):
             variable = self.uppercase, 
             onvalue=1, 
             offvalue=0)
-        self.cb_uppercase.grid(row=3, column=1, sticky='w')
+        self.cb_uppercase.grid(row=4, column=1, sticky='w')
 
         # Checkbutton 8 Char
         self.eightchar = IntVar()
@@ -1202,7 +1219,15 @@ class epsig2_gui(threading.Thread):
             variable = self.eightchar, 
             onvalue=1, 
             offvalue=0)
-        self.cb_eightchar.grid(row=4, column=1, sticky='w',)
+        self.cb_eightchar.grid(row=5, column=1, sticky='w',)
+
+        ###################################################################
+        # Other Settings
+
+        # Text Label sl1 location
+        self.label_Other = ttk.Label(frame_checkbuttons, 
+            text = "Other Settings: ")
+        self.label_Other.grid(row=6, column=1, sticky='w',)
 
         # Checkbutton Write to Log
         self.writetolog = IntVar()
@@ -1214,7 +1239,7 @@ class epsig2_gui(threading.Thread):
             variable = self.writetolog, 
             onvalue=1, 
             offvalue=0)
-        self.cb_writetolog.grid(row=5, column=1, sticky='w',)
+        self.cb_writetolog.grid(row=7, column=1, sticky='w',)
 
         # Timestamp logs
         self.logtimestamp = IntVar()
@@ -1226,7 +1251,19 @@ class epsig2_gui(threading.Thread):
             variable = self.logtimestamp, 
             onvalue=1, 
             offvalue=0)
-        self.cb_logtimestamp.grid(row=6, column=1, sticky='w',)
+        self.cb_logtimestamp.grid(row=8, column=1, sticky='w',)
+
+        # epsig.exe BNK file validate
+        self.epsigexe = IntVar() 
+        self.epsigexe.set(1) 
+        self.cb_epsigexe = Checkbutton(
+            frame_checkbuttons, 
+            text="epsig.exe to verify BNK file formats", 
+            justify=LEFT, 
+            variable = self.epsigexe, 
+            onvalue=1, 
+            offvalue=0)
+        self.cb_epsigexe.grid(row=9, column=1, sticky='w',)
 
         ################ Bottom FRAME ##############
         frame_bottombuttons = ttk.Frame(self.root)
@@ -1267,21 +1304,6 @@ class epsig2_gui(threading.Thread):
         frame_cachebuttons.pack(side=BOTTOM, fill=X, expand = True)
         frame_cachebuttons.config(relief = RIDGE, borderwidth = 2)
 
-        # Print Cache Button
-        button_cache = ttk.Button(frame_cachebuttons, 
-            text = "Print Cache",
-            command = lambda: self.handleButtonPress('__print_cache__'),
-            width = 20)
-        button_cache.grid(row=1, column=3, sticky='w', padx=5, pady=5)
-        
-        # Clear Cache Button
-        self.button_clear_cache = ttk.Button(
-            frame_cachebuttons, 
-            text = "Clear Cache",
-            command = lambda: self.handleButtonPress('__clear_cache__'), 
-            width = 20)
-        self.button_clear_cache.grid(row=1, column=4, sticky='w', padx=5, pady=5)
-
         # Checkbutton Use Cache File
         self.useCacheFile = IntVar()
         self.useCacheFile.set(1)
@@ -1303,6 +1325,20 @@ class epsig2_gui(threading.Thread):
             command = lambda: self.handleButtonPress('__select_cache_file__'))
         self.button_select_cache_button.grid(row=1, column=2, sticky='w', padx=3, pady=3)
         
+        # Print Cache Button
+        button_cache = ttk.Button(frame_cachebuttons, 
+            text = "Print Cache",
+            command = lambda: self.handleButtonPress('__print_cache__'),
+            width = 20)
+        button_cache.grid(row=1, column=3, sticky='w', padx=5, pady=5)
+        
+        # Clear Cache Button
+        self.button_clear_cache = ttk.Button(
+            frame_cachebuttons, 
+            text = "Clear Cache",
+            command = lambda: self.handleButtonPress('__clear_cache__'), 
+            width = 20)
+        self.button_clear_cache.grid(row=1, column=4, sticky='w', padx=5, pady=5)        
         #if self.useCacheFile.get() == 1: # Use Cache File
         #    self.button_clear_cache.state(["disabled"])
         #    self.button_clear_cache.config(state=DISABLED)

@@ -29,7 +29,7 @@ def main():
     options_d['selectedHashtype'] = hash_type        
 
 # generate the hash
-    verify_with_epsigexe = True # True: use epsig.exe to verify bnk file format
+    verify_with_epsigexe = False # True: use epsig.exe to verify bnk file format
                                 # False: use builtin function to verify BNK format
 
     myp = epsig2(my_seed.seed, bnk_or_bin_file, options_d, cache_d, hash_type, verify_with_epsigexe)
