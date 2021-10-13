@@ -1,18 +1,187 @@
-import os
-import logging
-import csv
 import concurrent.futures
-import string
-import threading
-import hmac
+import csv
 import hashlib
+import hmac
+import json
+import logging
+import os
+import string
 import sys
+import threading
+import getpass
 
-from epsig2_gui import BNKEntry
+from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, wait, as_completed
 
 p_reset = "\x08"*8
 
+TEST=True   # This must be changed once released
+
+if TEST: 
+    DEFAULT_CACHE_FILE="epsig2_cachefile_v3.json"
+else: 
+    DEFAULT_CACHE_FILE = "\\\Justice.qld.gov.au\\Data\\OLGR-TECHSERV\\TSS Applications Source\\James\\epsig2_cachefile_v3.json"
+
+
+## Seed class
+class Seed(): 
+
+    def __init__(self, seed, hash_type):
+        self.hash_type = hash_type 
+        valid_hash_types = ['HMAC-SHA256', 'HMAC-SHA1']
+        if hash_type in valid_hash_types: 
+            self.seed = self.getSeed(seed)
+            logging.warning("Seed Modifed to: " + self.seed)
+        else:
+            self.seed = None
+            return -1
+
+    def getSeed(self, s): 
+        output_str = ''
+        # need to append '0' to include appropriate length
+        if self.hash_type == 'HMAC-SHA256' and len(s) < 64: 
+            # append
+            output_str = s.ljust(64, '0')
+        elif self.hash_type == 'HMAC-SHA1' and len(s) < 40:
+            output_str = s.ljust(40, '0')
+        elif self.hash_type == 'HMAC-SHA256' and len(s) > 64: 
+            # truncate
+            output_str = s[:64] 
+        elif self.hash_type == 'HMAC-SHA1' and len(s) > 40: 
+            output_str = s[:40] 
+        else: 
+            return s
+
+        return output_str
+
+
+## BNKEntry class
+class BNKEntry:
+    # helper class for sanitizing BNK file entries
+
+    def __init__(self, line): 
+        self.fields = [i for i in line if i] # remove empty strings
+
+        fields = self.fields
+        assert(len(fields) == 3), "Maximum 3 fields"
+
+        # filenameX The filename+ext of a binary image (max 250 chars and must not contain spaces)
+        assert(len(fields[0]) < 250), "filename max 250 chars"
+        assert(" " not in fields[0]), "filename must not contain spaces"
+        self.fname = fields[0] 
+
+        #algX       The hash algorithm designation type to be used for the image.
+        #           Refer to previous list of supported algorithm types & designations.
+        #           Cannot be “BLNK” (i.e. no recursion)            
+        assert(fields[1] in ACCEPTABLE_HASH_ALGORITHMS), "unknown hash algorithm"
+        self.hash_type = fields[1] 
+
+        assert(fields[2] == 'p'), "must be a 'p'"
+        self.hash_type = fields[1] 
+
+    def toJSON(self): 
+        return (json.dumps(self, default=lambda o: o.__dict__, sort_keys = True, indent=4))
+
+
+## CacheFile class
+class CacheFile(): 
+
+    def __init__(self, fname):
+        logging.basicConfig(level=logging.DEBUG, format=' %(asctime)s - %(levelname)s- %(message)s')    
+
+        self.user_cache_file = fname
+        self.cache_dict = self.importCacheFile() # read file
+
+    def clearFile(self): 
+        cache_data = dict() # empty
+        self.updateCacheFile(cache_data)
+
+    def importCacheFile(self):
+        cache_data = dict() # empty
+        if self.user_cache_file: # Handle User selectable Cache File
+            cache_location = self.user_cache_file
+        else: 
+            cache_location = DEFAULT_CACHE_FILE
+        
+        if os.path.isfile(cache_location): 
+            # Verify Cache Integrity
+            if self.verifyCacheIntegrity(cache_location[:-4] + "sigs"): 
+                with open(cache_location,'r') as json_cachefile: 
+                    cache_data = json.load(json_cachefile)
+            else: 
+                logging.warning("**** WARNING **** File Cache integrity issue: " +
+                        " Cannot Verify signature")
+                logging.info("Generating new File Cache file: " + cache_location)
+                cache_data = {} # return empty cache
+        else:
+            logging.info(cache_location + 
+                " cannot be found. Generating default file...")
+            with open(cache_location, 'w') as json_cachefile:
+                # write empty json file
+                json.dump({}, 
+                    json_cachefile, 
+                    sort_keys=True, 
+                    indent=4, 
+                    separators=(',', ': '))
+        
+        return(cache_data)
+
+    def verifyCacheIntegrity(self, cache_location_sigs): 
+        if os.path.isfile(cache_location_sigs): # Sigs file exist?
+            with open(cache_location_sigs, 'r') as sigs_file: 
+                cache_sigs_data = json.load(sigs_file)
+                my_hash = cache_sigs_data['cachefile_hash']
+                fname = cache_sigs_data['filename']
+                
+                generated_hash = epsig2.dohash_sha256(self, fname)
+                if my_hash == generated_hash: 
+                    return True
+                else: 
+                    return False     
+        else: 
+            # advise user
+            logging.warning("**** WARNING **** Generating new Cache Sigs file") 
+            if self.user_cache_file: # Handle User selectable Cache File
+                cache_location = self.user_cache_file
+            else: 
+                cache_location = DEFAULT_CACHE_FILE
+            
+            self.signCacheFile(cache_location) # Generate Cache
+        
+    def signCacheFile(self, cache_location):
+        sigsCacheFile = cache_location[:-4] + "sigs" # .json file renaming to .sigs file
+        
+        with open(sigsCacheFile,'w') as sigs_file: 
+            h = epsig2.dohash_sha256(self, cache_location) # requires file name as input
+            
+            timestamp = datetime.now()
+            sigs_dict = { 'cachefile_hash' : h,
+                          'filename': cache_location,
+                          'last_generated_by_user' : getpass.getuser(),
+                          'date': str(timestamp.strftime("%Y-%m-%d %H:%M"))
+                        }
+            
+            json.dump(sigs_dict,
+                      sigs_file,
+                      sort_keys=True,
+                      indent=4,
+                      separators=(',', ': '))
+        
+    def updateCacheFile(self, cache_dict):
+        if self.user_cache_file:
+            cache_location = self.user_cache_file
+        else: 
+            cache_location = DEFAULT_CACHE_FILE
+            
+        if os.path.isfile(cache_location):
+            with open(cache_location, 'w') as json_cachefile:
+                json.dump(cache_dict,
+                          json_cachefile,
+                          sort_keys=True,
+                          indent=4,
+                          separators=(',', ': '))
+            
+            self.signCacheFile(cache_location) # Sign Cache
 
 ## Main epsig2 class
 class epsig2():
