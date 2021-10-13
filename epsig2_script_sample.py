@@ -2,7 +2,8 @@ import os
 import csv
 import subprocess
 
-from epsig2_gui import epsig2, Seed
+from epsig2 import epsig2
+from epsig2_gui import Seed
 
 def main():
     # Set Input Options

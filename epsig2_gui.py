@@ -86,7 +86,7 @@ from threading import Thread
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, wait, as_completed
 
-VERSION = "1.6"
+VERSION = "2.0"
 
 TEST=True   # This must be changed once released
 
@@ -102,6 +102,8 @@ else:
 DEFAULT_STR_LBL_SEED_FILE = "Details of Seed File: <No SL1/MSL Seed File Selected>"
 
 p_reset = "\x08"*8
+
+EPSIGEXE_PATH = 'G:/OLGR-TECHSERV/BINIMAGE/epsig3_7.exe'
 
 ## BNKEntry class
 class BNKEntry:
@@ -130,6 +132,7 @@ class BNKEntry:
     def toJSON(self): 
         return (json.dumps(self, default=lambda o: o.__dict__, sort_keys = True, indent=4))
 
+## Seed class
 class Seed(): 
 
     def __init__(self, seed, hash_type):
@@ -210,7 +213,7 @@ class CacheFile():
                 my_hash = cache_sigs_data['cachefile_hash']
                 fname = cache_sigs_data['filename']
                 
-                generated_hash = epsig2.dohash_sha256(self, fname)
+                generated_hash = epsig2_gui.dohash_sha256(self, fname)
                 if my_hash == generated_hash: 
                     return True
                 else: 
@@ -229,7 +232,7 @@ class CacheFile():
         sigsCacheFile = cache_location[:-4] + "sigs" # .json file renaming to .sigs file
         
         with open(sigsCacheFile,'w') as sigs_file: 
-            h = epsig2.dohash_sha256(self, cache_location) # requires file name as input
+            h = epsig2_gui.dohash_sha256(self, cache_location) # requires file name as input
             
             timestamp = datetime.now()
             sigs_dict = { 'cachefile_hash' : h,
@@ -758,6 +761,7 @@ class epsig2():
                         logging.debug(outputstr + "\tFormatted Result" + "\t [" + str(threading.currentThread().getName()) + "]")
 
 
+## epsig2_gui class
 class epsig2_gui(threading.Thread):
 
     # Constructor
@@ -778,10 +782,44 @@ class epsig2_gui(threading.Thread):
 
         Thread(self.setupGUI()).start()        
 
-    def dobnkfile(self, fname, seed): 
-        epsig_path = 'G:/OLGR-TECHSERV/BINIMAGE/epsig3_7.exe'
-        if not os.path.isfile(epsig_path):
-            logging.error("epsig.exe cannot be found in: " + epsig_path)
+    # input: file to be hashed using sha256()
+    # output: hexdigest of input file    
+    def dohash_sha256(self, fname, chunksize=8192): 
+        m = hashlib.sha256()         
+
+        # Read in chunksize blocks at a time
+        with open(fname, 'rb') as f:
+            while True:
+                block = f.read(chunksize)
+                if not block: break
+                m.update(block)    
+
+        return m.hexdigest()
+
+    def verifyFileExists(self, fname): 
+        mandir = os.path.dirname(fname)
+        rv = False
+        if os.path.isfile(fname) and fname.endswith(".BNK"): 
+            with open(fname, 'r', encoding='utf-8') as bnkfile: 
+                f = csv.reader(bnkfile, delimiter=' ')
+                try: 
+                    for line in f: 
+                        logging.info("BNKEntry: " + BNKEntry(line).toJSON()) # parse BNK for errors
+                    rv = True
+                except csv.Error as e: 
+                    # sys.exit('fname %s, line %d: %s' % (fname, f.line_num, e))  
+                    msg = "*** ERROR: " + fname + " cannot be read from disk"
+                    logging.error(msg)                             
+        elif os.path.isfile(fname): # BIN files and others
+            rv = True
+        else: 
+            return False
+
+        return rv
+
+    def epsigexe_start(self, fname, seed): 
+        if not os.path.isfile(EPSIGEXE_PATH):
+            logging.error("epsig.exe cannot be found in: " + EPSIGEXE_PATH)
             return None
 
         if ' ' in os.path.basename(fname): 
@@ -789,8 +827,8 @@ class epsig2_gui(threading.Thread):
             return None
 
         # the following will block
-        proc = subprocess.run([epsig_path, fname, seed], capture_output=True) #stdout=subprocess.PIPE
-        
+        proc = subprocess.run([EPSIGEXE_PATH, fname, seed], capture_output=True) #stdout=subprocess.PIPE
+
         err = proc.stderr.decode('utf-8')
         stdout = proc.stdout.decode('utf-8').split("\r\n")
         stdout = [i for i in stdout if i] # remove empty strings 
@@ -804,6 +842,16 @@ class epsig2_gui(threading.Thread):
         rv['err'] = err
         rv['stdout'] = stdout
         rv['results'] = result_l
+
+        hash_results_l = list() 
+        for item in rv['results']:
+            results = item.split(' ')
+            hash_results_l.append(results[2])
+        print("hash_results_l", hash_results_l)
+
+        if fname.upper().endswith('BNK'): 
+            rv['hash_result'] = hash_results_l[1]   # return result
+
         rv['returncode'] = proc.returncode == 0
 
         return rv
@@ -841,12 +889,16 @@ class epsig2_gui(threading.Thread):
     def getClubsQSIM_Expected_output(self, text): 
         return "".join(reversed([text[i:i+2] for i in range(0, len(text), 2)]))
 
+    def getQCAS_Expected_output(self, text):
+        tmpstr = text[:8] # Returns from the beginning to position 8 of uppercase text
+        return "".join(reversed([tmpstr[i:i+2] for i in range(0, len(tmpstr), 2)]))
+
     # Generates the Seed object everytime the "start" button is pressed. 
     def GetSeedText(self):
         tmp_seed = ''
         # reverse the seed.
         if (self.reverse.get() == 1): 
-            tmp_seed = epsig2.getQCAS_Expected_output(self, self.combobox_SelectSeed.get())
+            tmp_seed = self.getQCAS_Expected_output(self.combobox_SelectSeed.get())
         else: 
             tmp_seed = self.combobox_SelectSeed.get()
 
@@ -870,34 +922,43 @@ class epsig2_gui(threading.Thread):
         z.update(y)    # modifies z with y's keys and values & returns None
         return z
 
-    def updateGUI(self, epsig2_process): 
-        # update main text area window
-        #     def format_output(self, inputstr, options_d):
-        if epsig2_process.filepath:
-            if epsig2_process.filepath.upper().endswith('.BNK'): 
-                # Display Filename to be processed
-                self.text_BNKoutput.insert(END, "\nProcessing: " + epsig2_process.filepath + "\n")            
-                # Display BNK details
-                for hash_result in epsig2_process.LogOutput: 
-                    # bnk_details_hash_output = hash_result['seed'] + "\t" + hash_result['hash'] + "\t" + hash_result['filename']
-                    seed_str = epsig2.format_output(self, hash_result['seed'], self.gui_getOptions())
-                    hash_str = epsig2.format_output(self, hash_result['hash'], self.gui_getOptions())
-                    
-                    bnk_details_hash_output = seed_str + "\t" + hash_str + "\t" + hash_result['filename']
-                    self.text_BNKoutput.insert(END, bnk_details_hash_output + "\n")
-                
-                self.text_BNKoutput.insert(END, "XOR Result: " + "\n")
-            else: 
-                self.text_BNKoutput.insert(END, "Formatted Result: " + "\n")
-        else: 
-            self.text_BNKoutput.insert(END, "Invalid file - error in file/filename format.\n")
-
-        # Format seed and XOR/Formatted Result
-        seed_output = epsig2.format_output(self, self.seed.seed, self.gui_getOptions())
-        str_output = epsig2.format_output(self, epsig2_process.xor_result, self.gui_getOptions())
+    # returns Hashstring or None (if faiiled)
+    def checkCacheFilename(self, filename, seed_input): # alg_input 
+        # For filename_seed, concatenate to form unique string. 
+        if filename in self.cache_dict.keys(): # a hit?
+            data = self.cache_dict.get(filename) # now a list
+            for item in data:
+                # Check if Seed and Algorithm matches. 
+                if item['seed'] == seed_input: 
+                    # verified_time = item['verify'] 
+                    return(str(item['hash'])) # return Hash result
         
-        if epsig2_process.filepath: 
-            self.text_BNKoutput.insert(END, seed_output + "\t" + str_output + "\t" + os.path.basename(epsig2_process.filepath + "\n"))
+        return None    
+
+    # Formats inputstr based on options_d dictionary
+    # Note this can be used outside this script. 
+    def format_output(self, inputstr, options_d):
+        outputstr = ''
+
+        if options_d['selectedHashtype'] == 'HMAC-SHA1': 
+            outputstr = inputstr.lstrip('0X').lstrip('0x').zfill(40) #strip 0x first
+        elif options_d['selectedHashtype'] == 'HMAC-SHA256': 
+            outputstr = inputstr.lstrip('0X').lstrip('0x').zfill(64) #strip 0x first
+
+        # include a space for every eight chars
+        if (options_d['eightchar'] == True):
+            s_range = 8
+            outputstr = " ".join(outputstr[i:i+s_range] for i in range(0, len(outputstr), s_range))
+        
+        # uppercase
+        if options_d['uppercase'] == True: 
+            outputstr = outputstr.upper()
+        
+        # QCAS expected result
+        if options_d['reverse'] == True:
+            outputstr = self.getQCAS_Expected_output(outputstr)
+        
+        return outputstr
 
     def startEpsig2GUI(self, filepath): 
         #futures = list() 
@@ -906,55 +967,100 @@ class epsig2_gui(threading.Thread):
         self.mandir = os.path.dirname(filepath)
 
         self.GetSeedText() 
-        epsigexe_output = self.dobnkfile(filepath, self.seed.seed)
 
-        if epsigexe_output and epsigexe_output['returncode'] == True: 
-            for result in epsigexe_output['results']: # log epsig3_7.exe output to log file
-                logging.info("epsig.exe: " + result) 
-            logging.info("epsig.exe: " + filepath + " format is correct.")   
+        if self.gui_getOptions()['cache_file_f'] == True: # Use Cache File
+            # Overwrite self.cache_dict with contents of file
+            cache_file = CacheFile(self.user_cache_file) 
+            self.cache_dict = cache_file.cache_dict
+
+
+        cachedhit = self.checkCacheFilename(filepath, self.seed.seed)        
+        if cachedhit != None: 
+            localhash = cachedhit
+            epsigexe_output = {} 
+            self.filepath = filepath
         else: 
-            logging.error("epsig.exe: " + os.path.basename(filepath) + " format Error. The file is not formatted as expected. Check the file contents for errors")
-            # need to provide error dialogue here
-            self.filepath = None
+            new_cache_list = list() 
+            if filepath.upper().endswith('BNK'): 
+            
+                epsigexe_output = self.epsigexe_start(filepath, self.seed.seed)
+                localhash = epsigexe_output['hash_result']
 
+                seed_info = { 
+                    'seed': self.seed.seed, 
+                    'hash': localhash 
+                }        
 
-        self.updateGUI_epsig(epsigexe_output)
+                cache_entry_list = self.cache_dict.get(self.mandir + "/" + self.bnk_filename) # Should return a list. 
+                if cache_entry_list : 
+                    # File Entry Exists, append to list
+                    cache_entry_list.append(seed_info) # print this
+                    self.cache_dict[self.mandir + "/" + self.bnk_filename] = cache_entry_list # keep unique
+                else:  
+                    # No File Entry Exits generate new list entry in cache_dict
+                    new_cache_list.append(seed_info)
+                    self.cache_dict[self.mandir + "/" + self.bnk_filename] = new_cache_list # keep unique
+                
+                # if self.useCacheFile.get() == 1:
+                if self.gui_getOptions()['cache_file_f'] == True:
+                    # self.updateCacheFile(self.cache_dict) # Update file cache
+                    cache_file.updateCacheFile(self.cache_dict) # Update file cache
+                else: 
+                    self.cache_dict[self.mandir + "/" + self.bnk_filename] = new_cache_list # update local cache
 
-    def updateGUI_epsig(self, output_d): 
-        if output_d['returncode'] == True: 
-            self.text_BNKoutput.insert(END, "\nProcessing: " + self.filepath + "\n")                    
-            self.text_BNKoutput.insert(END, "\n".join(output_d['results']))            
-        else:   
-            self.text_BNKoutput.insert(END, "*** epsig.exe error: " + output_d['err'])
+                if epsigexe_output['returncode'] == True: 
+                    for result in epsigexe_output['results']: # log epsig3_7.exe output to log file
+                        logging.info("epsig.exe: " + result) 
+                        # self.text_BNKoutput.insert(END, "*** epsig.exe: " + result + "\n")  
 
+                    logging.info("epsig.exe: " + filepath + " format is correct.")   
+                    localhash = epsigexe_output['hash_result']
+                    self.filepath = filepath
+                else: 
+                    self.text_BNKoutput.insert(END, "*** epsig.exe error: " + epsigexe_output['err'] + "\n")                
+                    logging.error("epsig.exe: " + os.path.basename(filepath) 
+                        + " format Error. The file is not formatted as expected. Check the file contents for errors")
+                    # need to provide error dialogue here
+                    self.filepath = None
 
-        # if (self.clubs_expected_output.get() == 1):
-        #     message = "\nQSIM reversed seed to use: " + self.getClubsQSIM_Expected_output(self.seed.seed) + "\n"
-        #     logging.info(message)
-        #     self.text_BNKoutput.insert(END, message)
+            else: 
+                # BIN file
+                my_p = epsig2(self.seed.seed, filepath, self.gui_getOptions(), self.cache_dict, str(self.selectedHashtype.get())) 
+                #futures.append(pool.submit(my_p.processfile, filepath, MAXIMUM_BLOCKSIZE_TO_READ)) # add processs to threadpool
+                my_p.processfile()
+                # update dict() 
+                self.cache_dict = self.merge_two_dicts(self.cache_dict, my_p.cache_dict)
+                localhash = my_p.xor_result
 
+                #self.updateGUI(my_p)
+
+                if self.writetolog.get() == 1: 
+                    self.writetoLogfile(EPSIG_LOGFILE, my_p, filepath, self.logtimestamp.get() == 1)                
+
+        self.updateGUI_epsig(localhash)
+    
+        if cachedhit:
+            outputstr = "%-50s\t%-s\t%-10s" % (self.format_output(str(localhash), 
+                self.gui_getOptions()), os.path.basename(self.filepath), "(cached)")
+        else:
+            outputstr = "%-50s\t%-s\t" % (self.format_output(str(localhash), self.gui_getOptions()), 
+                os.path.basename(self.filepath))
+        
+        logging.debug(outputstr + "[" + str(threading.currentThread().getName()) + "]")
+
+    def updateGUI_epsig(self, hash_result): 
+        self.text_BNKoutput.insert(END, "\nProcessing: " + self.filepath + "\n")                                    
         # logging.info("Seed is: " + self.seed.seed + " length is: " + str(len(self.seed.seed)))
+        if self.filepath.upper().endswith('.BNK'): 
+            self.text_BNKoutput.insert(END, "XOR Result: " + "\n")
+        else:
+            self.text_BNKoutput.insert(END, "Formatted Result: " + "\n")           
 
-        # if self.epsigexe.get() == 1: 
-        #     # create process for hashing a file 
-        #     my_p = epsig2(self.seed.seed, filepath, self.gui_getOptions(), self.cache_dict, str(self.selectedHashtype.get())) 
-        # else:
-        #     my_p = epsig2(self.seed.seed, filepath, self.gui_getOptions(), self.cache_dict, str(self.selectedHashtype.get()), False) 
+        # Format seed and XOR/Formatted Result
+        seed_output = self.format_output(self.seed.seed, self.gui_getOptions())
+        str_output = self.format_output(hash_result, self.gui_getOptions())
 
-        # #futures.append(pool.submit(my_p.processfile, filepath, MAXIMUM_BLOCKSIZE_TO_READ)) # add processs to threadpool
-        # my_p.processfile()
-        # # update dict() 
-        # self.cache_dict = self.merge_two_dicts(self.cache_dict, my_p.cache_dict)
-
-    #    def writetoLogfile(self, filename, xor_result, bnkfile, multi_logf):
-
-        # if self.writetolog.get() == 1: 
-        #     self.writetoLogfile(EPSIG_LOGFILE, my_p, filepath, self.logtimestamp.get() == 1)
-
-        # Create and launch a thread 
-        # t = Thread(group=None, target=my_p.processfile, name=self.bnk_filename, args=(filepath, MAXIMUM_BLOCKSIZE_TO_READ, )) 
-        # t.start()
-        # xor_result = self.processfile(filepath, MAXIMUM_BLOCKSIZE_TO_READ)
+        self.text_BNKoutput.insert(END, seed_output + "\t" + str_output + "\t" + os.path.basename(self.filepath + "\n"))
     
     def handleButtonPress(self, myButtonPress):
         
@@ -974,7 +1080,7 @@ class epsig2_gui(threading.Thread):
                     self.bnk_filename_list.append(fname_basename)
                     self.textfield_SelectedBNK.insert(0, fname_basename + "; ")
                     
-                    if not epsig2.verifyFileExists(self, fname):
+                    if not self.verifyFileExists(fname):
                         msg = "**** ERROR: " + fname + " cannot be read check contents"
                         self.text_BNKoutput.insert(END, msg)
                         logging.error(msg)
@@ -1027,7 +1133,6 @@ class epsig2_gui(threading.Thread):
                 self.CacheFileButtonText.set(DEFAULT_CACHE_FILE)
                 self.user_cache_file = None
                 self.selectedHashtype.set("HMAC-SHA1")
-                self.epsigexe.set(1) 
                 
         elif myButtonPress == '__clear_cache__':
                 if self.user_cache_file:
@@ -1190,12 +1295,18 @@ class epsig2_gui(threading.Thread):
             onvalue=1, 
             offvalue=0)
         self.cb_mslcheck.pack(side=LEFT, fill=X, padx = 3, pady = 3, expand=False)
+
+        # Text Label epsig.exe
+        self.label_epsigexe = ttk.Label(frame_toparea, 
+            text = EPSIGEXE_PATH + "\t:\t" + str(os.path.isfile(EPSIGEXE_PATH)), width = 80)
+        self.label_epsigexe.pack(side=BOTTOM, fill=X, padx = 3, pady = 3, expand=True)
         
         # Text Label sl1 location
         self.label_SeedPath = ttk.Label(frame_toparea, 
             text = DEFAULT_STR_LBL_SEED_FILE, width = 80)
         self.label_SeedPath.pack(side=BOTTOM, fill=X, padx = 3, pady = 3, expand=True)
         
+
         ######################### MIDDLE FRAME
         frame_middleframe = ttk.Frame(self.root)
         frame_middleframe.pack(side = TOP, fill=BOTH, expand=True)
@@ -1302,17 +1413,6 @@ class epsig2_gui(threading.Thread):
             offvalue=0)
         self.cb_logtimestamp.grid(row=8, column=1, sticky='w',)
 
-        # epsig.exe BNK file validate
-        self.epsigexe = IntVar() 
-        self.epsigexe.set(1) 
-        self.cb_epsigexe = Checkbutton(
-            frame_checkbuttons, 
-            text="epsig.exe to verify BNK file formats", 
-            justify=LEFT, 
-            variable = self.epsigexe, 
-            onvalue=1, 
-            offvalue=0)
-        self.cb_epsigexe.grid(row=9, column=1, sticky='w',)
 
         ################ Bottom FRAME ##############
         frame_bottombuttons = ttk.Frame(self.root)
