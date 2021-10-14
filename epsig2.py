@@ -31,7 +31,7 @@ class Seed():
         valid_hash_types = ['HMAC-SHA256', 'HMAC-SHA1']
         if hash_type in valid_hash_types: 
             self.seed = self.getSeed(seed)
-            logging.warning("Seed Modifed to: " + self.seed)
+            logging.info("Seed Modifed to: " + self.seed)
         else:
             self.seed = None
             return -1
