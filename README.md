@@ -57,4 +57,5 @@ Where:-
 
 ### v2.0
 - uses epsig.exe as main engine.
-- the script is now just a wrapper
+- the script is a wrapper for epsig.exe for BNK files
+- for BIN files, it uses python functions to calculate hash values

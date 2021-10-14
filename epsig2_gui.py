@@ -55,7 +55,7 @@
 #       - test for spaces in BNK file names
 #       - test for other incorrect BNK file formats
 #       - Updated GUI to add option to enable/disable epsig.exe file format checks.
-# v2.0  - utilises epsig.exe to perform BNK file hashes
+# v2.0  - utilises epsig.exe to perform BNK file format checks and hashes
 
 import os
 import sys
@@ -93,7 +93,6 @@ VERSION = "2.0"
 
 EPSIG_LOGFILE = "epsig2.log"
 MAXIMUM_BLOCKSIZE_TO_READ = 65535
-ACCEPTABLE_HASH_ALGORITHMS = ['CR16', 'CR32','PS32','PS16','OA4F','OA4R','SHA1']
 
 DEFAULT_STR_LBL_SEED_FILE = "Details of Seed File: <No SL1/MSL Seed File Selected>"
 
@@ -786,12 +785,6 @@ class epsig2_gui(threading.Thread):
             command = lambda: self.handle_button_press('__clear_cache__'), 
             width = 20)
         self.button_clear_cache.grid(row=1, column=4, sticky='w', padx=5, pady=5)        
-        #if self.useCacheFile.get() == 1: # Use Cache File
-        #    self.button_clear_cache.state(["disabled"])
-        #    self.button_clear_cache.config(state=DISABLED)
-        # else:
-        #    self.button_clear_cache.state(["!disabled"])
-        #    self.button_clear_cache.config(state=not DISABLED)
 
         self.root.mainloop()
         

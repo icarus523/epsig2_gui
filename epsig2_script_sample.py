@@ -30,8 +30,8 @@ def main():
     options_d['selectedHashtype'] = hash_type        
 
 # generate the hash
-    verify_with_epsigexe = False # True: use epsig.exe to verify bnk file format
-                                # False: use builtin function to verify BNK format
+    verify_with_epsigexe = True    # True: use epsig.exe to verify bnk file format
+                                    # False: use builtin function to verify BNK format
 
     myp = epsig2(my_seed.seed, bnk_or_bin_file, options_d, cache_d, hash_type, verify_with_epsigexe)
     if myp.filepath != None:  # if filepath = None, then error in file/filename format
@@ -41,8 +41,7 @@ def main():
         xor_result = epsig2.format_output(None, myp.xor_result, options_d)
         p_seed = epsig2.format_output(None, my_seed.seed, options_d)
 
-        print(p_seed + "\t" + xor_result) 
-
+        print("\n" + p_seed + "\t" + xor_result + "\t" + os.path.basename(bnk_or_bin_file)) 
     else: 
         print("invalid file - error in file/filename format: " + bnk_or_bin_file)
 

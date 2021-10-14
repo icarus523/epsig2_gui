@@ -9,6 +9,7 @@ import string
 import sys
 import threading
 import getpass
+import subprocess
 
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, wait, as_completed
@@ -21,6 +22,8 @@ if TEST:
     DEFAULT_CACHE_FILE="epsig2_cachefile_v3.json"
 else: 
     DEFAULT_CACHE_FILE = "\\\Justice.qld.gov.au\\Data\\OLGR-TECHSERV\\TSS Applications Source\\James\\epsig2_cachefile_v3.json"
+
+ACCEPTABLE_HASH_ALGORITHMS = ['CR16', 'CR32','PS32','PS16','OA4F','OA4R','SHA1']
 
 
 ## Seed class
@@ -273,46 +276,6 @@ class epsig2():
             return False
 
         return rv
-        
-    # def verifyFileExists(self, fname): 
-    #     mandir = os.path.dirname(fname)
-    #     rv = True
-    #     with open(fname, 'r') as infile: 
-    #         fdname = ['fname', 'type', 'blah']
-    #         reader = csv.DictReader(infile, delimiter=' ', fieldnames = fdname)
-
-    #         for row in reader:
-    #             fp = os.path.join(mandir, str(row['fname']))
-                
-    #             if str(row['type']).upper() == 'SHA1' or str(row['type']).upper() == 'SHA256':
-    #                 # check if the file exists
-    #                 if not (os.path.isfile(fp)):
-    #                     msg = "**** ERROR: " + fp + " cannot be read from disk"
-    #                     logging.error(msg)                         
-    #                     rv = False
-    #             else:
-    #                 msg = fp + " is not an expected hash type"
-    #                 logging.error(msg)                                             
-    #                 rv = False
-    #     return rv
-    
-    # def verifyFileExists(self, f):
-        # rv = True
-        # if f.endswith(".BNK"): 
-            # with open(f, 'r') as infile: 
-                # fdname = ['fname', 'type', 'blah']
-                # reader = csv.DictReader(infile, delimiter=' ', fieldnames = fdname)
-                # for row in reader: 
-                    # path = os.path.dirname(f)
-                    # fp = os.path.join(path, str(row['fname'])) # can't use: os.path.join(self.mandir, str(row['fname'])), as the Cache expects "/"
-                    # if not os.path.isfile(fp): 
-                        # msg = "**** ERROR: " + fp + " cannot be read from disk"
-                        # logging.error(msg)                        
-                        # rv = False   
-        # else: 
-            # if not os.path.isfile(f): 
-                # rv= False
-        # return rv
 
     # returns Hashstring or None (if faiiled)
     def checkCacheFilename(self, filename, seed_input, alg_input): # alg_input 
@@ -326,19 +289,6 @@ class epsig2():
                     return(str(item['hash'])) # return Hash result
         
         return None    
-
-    # def checkCacheFilename_BNK(self, filename, seed_input, alg_input): # alg_input 
-    #     # For filename_seed, concatenate to form unique string. 
-    #     if filename in self.cache_dict.keys(): # a hit?
-    #         data = self.cache_dict.get(filename) # now a list
-    #         # print(json.dumps(data, indent=4, sort_keys=True))
-    #         for item in data:
-    #             # Check if Seed and Algorithm matches. 
-    #             if item['seed'] == seed_input and item['alg'] == alg_input: 
-    #                 # verified_time = item['verify'] 
-    #                 return(str(item['hash'])) # return Hash result
-        
-    #     return None  
 
     # input: file to be CRC32 
     def dohash_crc32(self, fname):
