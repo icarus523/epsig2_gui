@@ -56,7 +56,9 @@
 #       - test for other incorrect BNK file formats
 #       - Updated GUI to add option to enable/disable epsig.exe file format checks.
 # v2.0  - utilises epsig.exe to perform BNK file format checks and hashes
-
+# v2.1  - addressed issue with output stripping starting '0'
+#       - now can log back to files for BIN/BNK files, including separate log files. 
+#       - added support to disable epsig.exe for BNK files (if needed)
 import os
 import sys
 import csv
@@ -89,7 +91,7 @@ from concurrent.futures import ThreadPoolExecutor, wait, as_completed
 
 from epsig2 import epsig2, CacheFile, BNKEntry, Seed, DEFAULT_CACHE_FILE
 
-VERSION = "2.0"
+VERSION = "2.1"
 
 EPSIG_LOGFILE = "epsig2.log"
 MAXIMUM_BLOCKSIZE_TO_READ = 65535
@@ -181,13 +183,41 @@ class epsig2_gui(threading.Thread):
 
         return rv
 
+    def write_to_logfile2(self, filename, epsig2exe_d, bnkfile, multi_logf):
+        timestamp = datetime.timestamp(datetime.now())
+        outputfile = ''
+        outputdir = 'epsig2-logs'
+
+        #if self.logtimestamp.get() == 1: # Multi log files not overwritten saved in different directory
+        if multi_logf == True: 
+            if not os.path.exists(outputdir):
+                os.makedirs(outputdir)
+            outputfile = outputdir + "/" + filename[:-4] + "-" + str(timestamp) + ".log"
+        else: # Single log file that's overwritten
+            outputfile = filename
+
+        with open(outputfile, 'a+') as outfile:
+            outfile.writelines("#--8<-----------GENERATED: " + 
+                str(datetime.fromtimestamp(timestamp)) + " --------------------------\n")
+            outfile.writelines("Processsed: " + bnkfile + "\n")
+            # outfile.writelines("%40s \t %40s \t %60s\n" % ("SEED", "HASH", "FILENAME"))
+
+            outfile.writelines("%-40s \t %-40s \t %-60s\n" % ("Seed", "Hash", "Filename"))
+            outfile.writelines("%40s \t %40s \t %-60s\n" % (
+                epsig2.format_output(self, self.seed.seed, self.gui_get_options()), 
+                epsig2.format_output(self, epsig2exe_d['hash_result'], self.gui_get_options()), 
+                os.path.basename(bnkfile)))
+
     def write_to_logfile(self, filename, epsig2_p, bnkfile, multi_logf):
         timestamp = datetime.timestamp(datetime.now())
         outputfile = ''
+        outputdir = 'epsig2-logs'
         
         #if self.logtimestamp.get() == 1: # Multi log files not overwritten saved in different directory
         if multi_logf == True: 
-            outputfile = "epsig2-logs/" + filename[:-4] + "-" + str(timestamp) + ".log"
+            if not os.path.exists(outputdir):
+                os.makedirs(outputdir)            
+            outputfile = outputdir + "/" + filename[:-4] + "-" + str(timestamp) + ".log"
         else: # Single log file that's overwritten
             outputfile = filename
 
@@ -209,6 +239,8 @@ class epsig2_gui(threading.Thread):
             else: 
                 outfile.writelines("%40s \t %40s \t Formatted Output\n" % (epsig2.format_output(self, my_seed, self.gui_get_options()), 
                     epsig2.format_output(self, epsig2_p.xor_result.replace(" ", ""), self.gui_get_options())))
+
+
 
     # Returns flipped bits of full length
     def getClubsQSIM_Expected_output(self, text): 
@@ -233,6 +265,7 @@ class epsig2_gui(threading.Thread):
         options_d['reverse'] = self.reverse.get() == 1
         options_d['usr_cache_file'] = self.CacheFileButtonText.get()        
         options_d['selectedHashtype'] = self.selectedHashtype.get()
+        options_d['use_epsigexe'] = self.use_epsigexe.get() == 1
 
         return options_d
 
@@ -279,48 +312,67 @@ class epsig2_gui(threading.Thread):
             localhash = cachedhit
             epsigexe_output = {} 
             self.filepath = filepath
+
+            # need to log if cache hit? 
         else: 
             new_cache_list = list() 
             if filepath.upper().endswith('BNK'): 
                 # BNK file
-                epsigexe_output = self.epsigexe_start(filepath, self.seed.seed)
-                if epsigexe_output['returncode'] == True:
-                    localhash = epsigexe_output['hash_result']
+                if self.use_epsigexe.get() == 1: 
+                    epsigexe_output = self.epsigexe_start(filepath, self.seed.seed)
+                    if epsigexe_output['returncode'] == True:
+                        localhash = epsigexe_output['hash_result']
 
-                    seed_info = { 
-                        'seed': self.seed.seed, 
-                        'hash': localhash 
-                    }        
+                        seed_info = { 
+                            'seed': self.seed.seed, 
+                            'hash': localhash 
+                        }        
 
-                    cache_entry_list = self.cache_dict.get(self.mandir + "/" + self.bnk_filename) # Should return a list. 
-                    if cache_entry_list : 
-                        # File Entry Exists, append to list
-                        cache_entry_list.append(seed_info) # print this
-                        self.cache_dict[self.mandir + "/" + self.bnk_filename] = cache_entry_list # keep unique
-                    else:  
-                        # No File Entry Exits generate new list entry in cache_dict
-                        new_cache_list.append(seed_info)
-                        self.cache_dict[self.mandir + "/" + self.bnk_filename] = new_cache_list # keep unique
-                    
-                    if self.gui_get_options()['cache_file_f'] == True:
-                        cache_file.updateCacheFile(self.cache_dict) # Update file cache
+                        cache_entry_list = self.cache_dict.get(self.mandir + "/" + self.bnk_filename) # Should return a list. 
+                        if cache_entry_list : 
+                            # File Entry Exists, append to list
+                            cache_entry_list.append(seed_info) # print this
+                            self.cache_dict[self.mandir + "/" + self.bnk_filename] = cache_entry_list # keep unique
+                        else:  
+                            # No File Entry Exits generate new list entry in cache_dict
+                            new_cache_list.append(seed_info)
+                            self.cache_dict[self.mandir + "/" + self.bnk_filename] = new_cache_list # keep unique
+                        
+                        if self.gui_get_options()['cache_file_f'] == True:
+                            cache_file.updateCacheFile(self.cache_dict) # Update file cache
+                        else: 
+                            self.cache_dict[self.mandir + "/" + self.bnk_filename] = new_cache_list # update local cache
+
+                        for result in epsigexe_output['results']: # log epsig3_7.exe output to log file
+                            logging.info("epsig.exe: " + result) 
+
+                        logging.info("epsig.exe: " + filepath + " format is correct.")   
+                        localhash = epsigexe_output['hash_result']
+                        self.filepath = filepath
                     else: 
-                        self.cache_dict[self.mandir + "/" + self.bnk_filename] = new_cache_list # update local cache
+                        messagebox.showerror("epsig.exe returncode = error", "Please check contents of the BNK file: " + filepath)
+                        localhash = '' # return empty string to force error. 
+                        msg = "epsig.exe: " + os.path.basename(filepath) + " format error. The file is not formatted as expected. Check the file contents for errors\n\n"
+                        self.text_BNKoutput.insert(END, "*** epsig.exe error: " + epsigexe_output['err'] + "\n" + msg)                                    
+                        logging.error(msg)
+                        # need to provide error dialogue here
+                        self.filepath = None
 
-                    for result in epsigexe_output['results']: # log epsig3_7.exe output to log file
-                        logging.info("epsig.exe: " + result) 
+                    # def write_to_logfile2(self, filename, epsig2exe_d, bnkfile, multi_logf):
+                    if self.writetolog.get() == 1: 
+                        self.write_to_logfile2(EPSIG_LOGFILE, epsigexe_output, self.filepath, self.logtimestamp.get() == 1)                
 
-                    logging.info("epsig.exe: " + filepath + " format is correct.")   
-                    localhash = epsigexe_output['hash_result']
-                    self.filepath = filepath
                 else: 
-                    messagebox.showerror("epsig.exe returncode = error", "Please check contents of the BNK file: " + filepath)
-                    localhash = '' # return empty string to force error. 
-                    msg = "epsig.exe: " + os.path.basename(filepath) + " format error. The file is not formatted as expected. Check the file contents for errors\n\n"
-                    self.text_BNKoutput.insert(END, "*** epsig.exe error: " + epsigexe_output['err'] + "\n" + msg)                                    
-                    logging.error(msg)
-                    # need to provide error dialogue here
-                    self.filepath = None
+                    # use epsig2.py to calculate BNK file hashes
+                    my_p = epsig2(self.seed.seed, filepath, self.gui_get_options(), self.cache_dict, str(self.selectedHashtype.get()), False) 
+                    my_p.processfile()
+                    self.cache_dict = self.merge_two_dicts(self.cache_dict, my_p.cache_dict)
+
+                    localhash = my_p.xor_result
+                    self.filepath = filepath
+
+                    if self.writetolog.get() == 1: 
+                        self.write_to_logfile(EPSIG_LOGFILE, my_p, filepath, self.logtimestamp.get() == 1)      
 
             else: 
                 # BIN file, use epsig2 (i.e. python shasums)
@@ -334,7 +386,7 @@ class epsig2_gui(threading.Thread):
                 self.filepath = filepath
 
                 if self.writetolog.get() == 1: 
-                    self.writetoLogfile(EPSIG_LOGFILE, my_p, filepath, self.logtimestamp.get() == 1)                
+                    self.write_to_logfile(EPSIG_LOGFILE, my_p, filepath, self.logtimestamp.get() == 1)                
 
         if len(localhash) > 0 and self.filepath != None: 
             self.update_GUI_epsigexe(localhash)        
@@ -360,6 +412,9 @@ class epsig2_gui(threading.Thread):
         str_output = epsig2.format_output(self, hash_result, self.gui_get_options())
 
         self.text_BNKoutput.insert(END, seed_output + "\t" + str_output + "\t" + os.path.basename(self.filepath + "\n"))
+
+
+
     
     def handle_button_press(self, myButtonPress):
         
@@ -418,7 +473,7 @@ class epsig2_gui(threading.Thread):
                 self.uppercase.set(1)
                 self.eightchar.set(0)
                 self.cb_eightchar.deselect()
-                self.writetolog.set(0)
+                self.writetolog.set(1)
                 self.logtimestamp.set(0)
                 self.clubs_expected_output.set(0)
                 self.label_SeedPath.configure(text=DEFAULT_STR_LBL_SEED_FILE) 
@@ -430,7 +485,8 @@ class epsig2_gui(threading.Thread):
                 self.CacheFileButtonText.set(DEFAULT_CACHE_FILE)
                 self.user_cache_file = None
                 self.selectedHashtype.set("HMAC-SHA1")
-                
+                self.use_epsigexe.set(1) 
+
         elif myButtonPress == '__clear_cache__':
                 if self.user_cache_file:
                     cache_location = self.user_cache_file
@@ -463,9 +519,9 @@ class epsig2_gui(threading.Thread):
         elif myButtonPress == '__selected_seed_file__':
             if (os.name == 'nt'): # Windows OS
                 if (self.mslcheck.get() == 1): # Handle MSL file option for QCAS datafiles
-                    tmp = filedialog.askopenfile(initialdir='G:\OLGR-TECHSERV\MISC\BINIMAGE\qcas')
+                    tmp = filedialog.askopenfile(initialdir='G:/OLGR-TECHSERV/MISC/BINIMAGE/qcas')
                 else: 
-                    tmp = filedialog.askopenfile(initialdir='S:\cogsp\docs\data_req\download\master') # put S:\ dir here. 
+                    tmp = filedialog.askopenfile(initialdir='S:/cogsp/docs/data_req/download/master') # put S:\ dir here. 
             elif (os.name == 'posix'): # Linux OS (my dev box)
                 tmp = filedialog.askopenfile(initialdir='.')
             else: 
@@ -710,6 +766,17 @@ class epsig2_gui(threading.Thread):
             offvalue=0)
         self.cb_logtimestamp.grid(row=8, column=1, sticky='w',)
 
+        # epsig.exe BNK file validate
+        self.use_epsigexe = IntVar() 
+        self.use_epsigexe.set(1) 
+        self.cb_epsigexe = Checkbutton(
+            frame_checkbuttons, 
+            text="epsig.exe to verify BNK file formats", 
+            justify=LEFT, 
+            variable = self.use_epsigexe, 
+            onvalue=1, 
+            offvalue=0)
+        self.cb_epsigexe.grid(row=9, column=1, sticky='w',)
 
         ################ Bottom FRAME ##############
         frame_bottombuttons = ttk.Frame(self.root)

@@ -56,3 +56,21 @@ class test_epsig2gui_manufacturers_BNK_test(epsig2GUI_TestClient):
         
         self.assertTrue(epsigexe_output['returncode'], epsigexe_output['returncode'])
         self.assertEqual(epsigexe_output['hash_result'], '187BFAE7AA142A1B103C813DB8524A3241A3B901000000000000000000000000')
+
+    def test_Konami_BNK_test(self): 
+        # Note - this results in string that starts with 0
+        Konami_BNK = 'G:/OLGR-TECHSERV/BINIMAGE/KONAMI/1815QDXX_395_004.BNK'
+
+        self.seed = '0000000000000000000000000000000000000000'
+        self.mandir = os.path.dirname(Konami_BNK)
+        self.options_d['cache_file_f'] = True 
+        self.LogOutput = list() 
+        self.selectedHashtype = 'HMAC-SHA1'    
+        self.options_d['selectedHashtype'] = self.selectedHashtype   
+
+        self.seed = Seed('0000000000000000000000000000000000000000', self.selectedHashtype).seed
+
+        epsigexe_output = epsig2_gui.epsigexe_start(self, Konami_BNK, self.seed)
+        
+        self.assertTrue(epsigexe_output['returncode'], epsigexe_output['returncode'])
+        self.assertEqual(epsigexe_output['hash_result'], '0C37609A43B590C5F8625B9047F24F30F51EBB8A000000000000000000000000')

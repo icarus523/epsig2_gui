@@ -559,12 +559,13 @@ class epsig2():
     # Formats inputstr based on options_d dictionary
     # Note this can be used outside this script. 
     def format_output(self, inputstr, options_d):
-        outputstr = ''
+        outputstr = inputstr
 
-        if options_d['selectedHashtype'] == 'HMAC-SHA1': 
-            outputstr = inputstr.lstrip('0X').lstrip('0x').zfill(40) #strip 0x first
-        elif options_d['selectedHashtype'] == 'HMAC-SHA256': 
-            outputstr = inputstr.lstrip('0X').lstrip('0x').zfill(64) #strip 0x first
+        if options_d['use_epsigexe'] == False: 
+            if options_d['selectedHashtype'] == 'HMAC-SHA1': 
+                outputstr = inputstr.lstrip('0X').lstrip('0x').zfill(40) #strip 0x first
+            elif options_d['selectedHashtype'] == 'HMAC-SHA256': 
+                outputstr = inputstr.lstrip('0X').lstrip('0x').zfill(64) #strip 0x first
 
         # include a space for every eight chars
         if (options_d['eightchar'] == True):
@@ -574,7 +575,9 @@ class epsig2():
         # uppercase
         if options_d['uppercase'] == True: 
             outputstr = outputstr.upper()
-        
+        else: 
+            outputstr = outputstr.lower()
+
         # QCAS expected result
         if options_d['reverse'] == True:
             outputstr = epsig2.getQCAS_Expected_output(self, outputstr)
