@@ -54,8 +54,12 @@ Where:-
  - Output to Output Field, has been changed to the format: <SEED>/t<HASH>/t<FNAME> - 
  - GUI has been standardised: padding, relief, etc.
 
-
 ### v2.0
 - uses epsig.exe as main engine.
 - the script is a wrapper for epsig.exe for BNK files
 - for BIN files, it uses python functions to calculate hash values
+
+### v2.1
+- addressed issue with output stripping starting '0'
+- now can log back to files for BIN/BNK files, including separate log files. 
+- added support to disable epsig.exe for BNK files (if needed)
