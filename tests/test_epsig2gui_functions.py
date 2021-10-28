@@ -5,6 +5,7 @@ import epsig2_gui
 
 from epsig2GUI_TestClient import epsig2GUI_TestClient
 from epsig2_gui import Seed, epsig2_gui
+from epsig2 import epsig2
 
 
 BNK_FILE_REMOTE = 'G:/OLGR-TECHSERV/BINIMAGE/KONAMI/1645GDXX_393_004.BNK'
@@ -76,4 +77,62 @@ class test_epsig2gui_functions(epsig2GUI_TestClient):
         # self.assertTrue(epsigexe_output['returncode'], epsigexe_output['returncode'])
         #self.assertEqual(epsigexe_output['hash_result'], 'FC1FE2617F2B5EF0C0652FB8D1345738782E6468000000000000000000000000' )
 
+    @unittest.skipIf(os.path.isfile(BNK_FILE_LOCAL) == False, "file not found")
+    def test_epsig2gui_display_options_uppercase(self): 
+        self.bnkfile = BNK_FILE_LOCAL
+        self.seed = '0000000000000000000000000000000000000000'
+        self.mandir = os.path.dirname(self.bnkfile)
+        self.options_d['cache_file_f'] = True 
+        self.LogOutput = list() 
+        self.selectedHashtype = 'HMAC-SHA1'    
+        
+        self.options_d['selectedHashtype'] = self.selectedHashtype   
+        self.options_d['uppercase'] = True
 
+        self.seed = Seed('0000000000000000000000000000000000000000', self.selectedHashtype).seed
+
+        epsigexe_output = epsig2_gui.epsigexe_start(self, self.bnkfile, self.seed)
+        self.assertTrue(epsigexe_output['returncode'])    
+        formatted_h = epsig2.format_output(self, epsigexe_output['hash_result'], self.options_d)            
+        self.assertEqual(formatted_h, 'FC1FE2617F2B5EF0C0652FB8D1345738782E6468000000000000000000000000')
+
+
+    @unittest.skipIf(os.path.isfile(BNK_FILE_LOCAL) == False, "file not found")
+    def test_epsig2gui_display_options_lowercase(self): 
+        self.bnkfile = BNK_FILE_LOCAL
+        self.seed = '0000000000000000000000000000000000000000'
+        self.mandir = os.path.dirname(self.bnkfile)
+        self.options_d['cache_file_f'] = True 
+        self.LogOutput = list() 
+        self.selectedHashtype = 'HMAC-SHA1'    
+        
+        self.options_d['selectedHashtype'] = self.selectedHashtype   
+        self.options_d['uppercase'] = False
+
+        self.seed = Seed('0000000000000000000000000000000000000000', self.selectedHashtype).seed
+
+        epsigexe_output = epsig2_gui.epsigexe_start(self, self.bnkfile, self.seed)
+        self.assertTrue(epsigexe_output['returncode'])    
+        formatted_h = epsig2.format_output(self, epsigexe_output['hash_result'], self.options_d)
+        self.assertEqual(formatted_h, 'fc1fe2617f2b5ef0c0652fb8d1345738782e6468000000000000000000000000')
+
+
+    @unittest.skipIf(os.path.isfile(BNK_FILE_LOCAL) == False, "file not found")
+    def test_epsig2gui_display_options_eightcharspace_lowercase(self): 
+        self.bnkfile = BNK_FILE_LOCAL
+        self.seed = '0000000000000000000000000000000000000000'
+        self.mandir = os.path.dirname(self.bnkfile)
+        self.options_d['cache_file_f'] = True 
+        self.LogOutput = list() 
+        self.selectedHashtype = 'HMAC-SHA1'    
+        
+        self.options_d['selectedHashtype'] = self.selectedHashtype   
+        self.options_d['eightchar'] = True
+        self.options_d['uppercase'] = False
+
+        self.seed = Seed('0000000000000000000000000000000000000000', self.selectedHashtype).seed
+
+        epsigexe_output = epsig2_gui.epsigexe_start(self, self.bnkfile, self.seed)
+        self.assertTrue(epsigexe_output['returncode'])    
+        formatted_h = epsig2.format_output(self, epsigexe_output['hash_result'], self.options_d)
+        self.assertEqual(formatted_h, 'fc1fe261 7f2b5ef0 c0652fb8 d1345738 782e6468 00000000 00000000 00000000')        

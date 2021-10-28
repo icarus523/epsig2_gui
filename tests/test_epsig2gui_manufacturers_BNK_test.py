@@ -55,7 +55,7 @@ class test_epsig2gui_manufacturers_BNK_test(epsig2GUI_TestClient):
         epsigexe_output = epsig2_gui.epsigexe_start(self, SGGaming_BNK, self.seed)
         
         self.assertTrue(epsigexe_output['returncode'], epsigexe_output['returncode'])
-        self.assertEqual(epsigexe_output['hash_result'], '187BFAE7AA142A1B103C813DB8524A3241A3B901000000000000000000000000')
+        self.assertEqual(epsigexe_output['hash_result'], '631401C7FA45C20EDAD7DEFCAC82A1E672B69DC3000000000000000000000000')
 
     def test_Konami_BNK_test(self): 
         # Note - this results in string that starts with 0

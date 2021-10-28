@@ -412,9 +412,6 @@ class epsig2_gui(threading.Thread):
         str_output = epsig2.format_output(self, hash_result, self.gui_get_options())
 
         self.text_BNKoutput.insert(END, seed_output + "\t" + str_output + "\t" + os.path.basename(self.filepath + "\n"))
-
-
-
     
     def handle_button_press(self, myButtonPress):
         
@@ -594,7 +591,7 @@ class epsig2_gui(threading.Thread):
         frame_toparea2.config(relief = None, borderwidth = 2)
         
         ttk.Label(frame_toparea2, justify=LEFT,
-                                  text = 'GUI script to process BNK/BIN files (Supports only HMAC-SHA1/HMAC-SHA256) - Please Select: ').pack(side=LEFT, padx=3, pady=3, fill=Y, expand=False, anchor='w')
+                                  text = 'GUI script to process BNK/BIN files (utilising epsig3_7.exe) - Please Select: ').pack(side=LEFT, padx=3, pady=3, fill=Y, expand=False, anchor='w')
 
         self.selectedHashtype = StringVar()
         optionMenuHashType = OptionMenu(frame_toparea2, self.selectedHashtype, 'HMAC-SHA1', 'HMAC-SHA256', command=self.select_hash_type).pack(side=LEFT, padx=3, pady=3, fill=X, expand=False, anchor='w')
