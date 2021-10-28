@@ -19,9 +19,9 @@ p_reset = "\x08"*8
 TEST=True   # This must be changed once released
 
 if TEST: 
-    DEFAULT_CACHE_FILE="epsig2_cachefile_v3.json"
+    DEFAULT_CACHE_FILE="epsig2_cachefile_v4.json"
 else: 
-    DEFAULT_CACHE_FILE = "\\\Justice.qld.gov.au\\Data\\OLGR-TECHSERV\\TSS Applications Source\\James\\epsig2_cachefile_v3.json"
+    DEFAULT_CACHE_FILE = "\\\Justice.qld.gov.au\\Data\\OLGR-TECHSERV\\TSS Applications Source\\James\\epsig2_cachefile_v4.json"
 
 ACCEPTABLE_HASH_ALGORITHMS = ['CR16', 'CR32','PS32','PS16','OA4F','OA4R','SHA1']
 
