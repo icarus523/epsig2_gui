@@ -9,3 +9,7 @@ epsig2_cachefile_test_empty.json
 *.bnk
 *.img
 *.txt
+*.bin
+/log
+/epsig2-logs
+/bnkfiles
