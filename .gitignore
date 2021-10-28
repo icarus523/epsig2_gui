@@ -1,4 +1,3 @@
-
 *.pyc
 *.log
 epsig2_cachefile_v3.json
@@ -13,3 +12,4 @@ epsig2_cachefile_test_empty.json
 /log
 /epsig2-logs
 /bnkfiles
+*.sublime-workspace
