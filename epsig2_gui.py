@@ -137,6 +137,10 @@ class epsig2_gui(threading.Thread):
             tk.messagebox("Error loading file", "Unable to open filename" + fname)
 
     def stripfile(self, fname, outfile="tmp.txt"):
+        # delete existing file
+        if os.path.isfile(outfile): 
+            os.remove(outfile)
+            
         with open(fname,'r') as oldfile, open(outfile, 'w+') as newfile:
             for line in oldfile:
                 if line.startswith('#'):
@@ -312,8 +316,7 @@ class epsig2_gui(threading.Thread):
                 os.path.basename(bnkfile)))
 
         if multi_logf == True and self.sign_log_files == True: 
-                logging.info("Signing file: " + outputfile)
-                self.signfileoutput(outputfile, outputfile)
+            self.signfileoutput(outputfile, outputfile)
 
     def signfileoutput(self, infile, outfile):
         h = epsig2.dohash_sha256(self, infile)
@@ -368,8 +371,7 @@ class epsig2_gui(threading.Thread):
                     epsig2.format_output(self, epsig2_p.xor_result.replace(" ", ""), self.gui_get_options())))
 
         if multi_logf == True and self.sign_log_files == True: 
-                logging.info("Signing file..." + outputfile)
-                self.signfileoutput(outputfile, outputfile)
+            self.signfileoutput(outputfile, outputfile)
 
     # Returns flipped bits of full length
     def getClubsQSIM_Expected_output(self, text): 
