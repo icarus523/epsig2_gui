@@ -89,6 +89,9 @@ from threading import Thread
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, wait, as_completed
 
+from subprocess import PIPE, Popen
+from queue import Queue, Empty
+
 from epsig2 import epsig2, CacheFile, BNKEntry, Seed, DEFAULT_CACHE_FILE
 
 VERSION = "2.1"
@@ -120,9 +123,41 @@ class epsig2_gui(threading.Thread):
         self.root = Tk()
         self.selectedHashtype = StringVar() 
         self.seed = None
+        self.sign_log_files = True # hard code this here
 
         Thread(self.setup_gui()).start()        
 
+    def verify_signed_logfile(self): 
+        fname = filedialog.askopenfilename(initialdir='epsig2-logs', defaultextension='.log')
+        if not fname: return
+        try:
+            Thread(target=self.verifyfile(fname)).start()
+        except Exception as e: 
+            raise
+            tk.messagebox("Error loading file", "Unable to open filename" + fname)
+
+    def stripfile(self, fname, outfile="tmp.txt"):
+        with open(fname,'r') as oldfile, open(outfile, 'w+') as newfile:
+            for line in oldfile:
+                if line.startswith('#'):
+                    continue # skip 
+                newfile.write(line)
+        return outfile
+
+    def verifyfile(self, fname):
+        h = epsig2.dohash_sha256(self, self.stripfile(fname))
+        logging.info("Signed log file to be verified: " + fname)
+        logging.info("SHA256 Hash Recalculated: " + str(h).upper())
+        # We uppercase in Written SIGS file, make sure you uppercase before comparing
+        if h.upper() in open(fname).read(): # HAX0Rs
+            messagebox.showinfo("File Verified!", "Calculated Hash:" + h.upper() 
+                + ",\nMatches with expected Hash.")
+            logging.info("Signed log file: Verified")
+        else: 
+            messagebox.showinfo("File Unverifiable!", "Calculated SHA256 Hash:" 
+                + h.upper() + ",\nDid not matches with expected Hash\n\nFAIL!")
+            logging.error("Signed log file: Unverified")    
+       
     def verify_file_exists(self, fname): 
         mandir = os.path.dirname(fname)
         rv = False
@@ -183,8 +218,71 @@ class epsig2_gui(threading.Thread):
 
         return rv
 
+    def enqueue_output(self, out, queue):
+        for line in iter(out.readline, b''):
+            queue.put(line)
+        out.close()
+
+    def epsigexe_start2(self, fname, seed): 
+        ON_POSIX = 'posix' in sys.builtin_module_names
+
+        if not os.path.isfile(EPSIGEXE_PATH):
+            logging.error("epsig.exe cannot be found in: " + EPSIGEXE_PATH)
+            return None
+
+        if ' ' in os.path.basename(fname): 
+            logging.error("no spaces allowed in filename: " + os.path.basename(fname))
+            return None
+
+        # the following will block
+        proc = subprocess.run([EPSIGEXE_PATH, fname, seed], capture_output=True) #stdout=subprocess.PIPE
+
+        # p = Popen([EPSIGEXE_PATH, fname, seed], stdout=PIPE, bufsize=1, close_fds=ON_POSIX)
+        # q = Queue()
+        # t = Thread(target=self.enqueue_output, args=(p.stdout, q))
+        # t.daemon = True # thread dies with the program
+        # t.start()
+
+        # # read line without blocking
+        # try:  
+        #     line = q.get_nowait() # or q.get(timeout=.1)
+        # except Empty:
+        #     print('no output yet')
+        # else: # got line
+        #     # ... do something with line
+        #     logging.info("epsig.exe: " + line)   
+
+        err = proc.stderr.decode('utf-8')
+        stdout = proc.stdout.decode('utf-8').split("\r\n")
+        stdout = [i for i in stdout if i] # remove empty strings 
+        
+        result_l = list() 
+        for row in stdout: 
+            if row.startswith('Hash'): 
+                result_l.append(row)
+
+        # convert epsig.exe output to a dict
+        rv = dict() 
+        rv['err'] = err
+        rv['stdout'] = stdout
+        rv['results'] = result_l
+
+        hash_results_l = list() 
+        for item in rv['results']:
+            results = item.split(' ')
+            hash_results_l.append(results[2])
+
+        rv['returncode'] = proc.returncode == 0
+
+        if fname.upper().endswith('BNK') and rv['returncode'] == True: 
+            rv['hash_result'] = hash_results_l[1]   # return result
+
+        return rv
+
+
     def write_to_logfile2(self, filename, epsig2exe_d, bnkfile, multi_logf):
-        timestamp = datetime.timestamp(datetime.now())
+        #timestamp = datetime.timestamp(datetime.now())
+        timestamp_f = datetime.today().isoformat().replace(":","-")
         outputfile = ''
         outputdir = 'epsig2-logs'
 
@@ -192,24 +290,49 @@ class epsig2_gui(threading.Thread):
         if multi_logf == True: 
             if not os.path.exists(outputdir):
                 os.makedirs(outputdir)
-            outputfile = outputdir + "/" + filename[:-4] + "-" + str(timestamp) + ".log"
-        else: # Single log file that's overwritten
+            # generate outputfile filename
+            head, bnk_filename = os.path.split(bnkfile)
+            manufacturer = head.split('/')[3] 
+            outputfile = outputdir + "/" + manufacturer + "-" + bnk_filename[:-4] + "-" + str(timestamp_f) + ".log"
+
+        else: # Single log file that's appended to
             outputfile = filename
 
         with open(outputfile, 'a+') as outfile:
-            outfile.writelines("#--8<-----------GENERATED: " + 
-                str(datetime.fromtimestamp(timestamp)) + " --------------------------\n")
+            outfile.writelines("---8<-----------GENERATED: " + 
+                # str(datetime.fromtimestamp(timestamp)) + " --------------------------\n")
+                timestamp_f +  " by: " + getpass.getuser()  +  " --------------------------\n")
             outfile.writelines("Processsed: " + bnkfile + "\n")
             # outfile.writelines("%40s \t %40s \t %60s\n" % ("SEED", "HASH", "FILENAME"))
 
-            outfile.writelines("%-40s \t %-40s \t %-60s\n" % ("Seed", "Hash", "Filename"))
-            outfile.writelines("%40s \t %40s \t %-60s\n" % (
+            outfile.writelines("%-40s\t%-65s\t%-60s\n" % ("Seed", "Hash", "Filename"))
+            outfile.writelines("%40s\t%65s\t%-60s\n" % (
                 epsig2.format_output(self, self.seed.seed, self.gui_get_options()), 
                 epsig2.format_output(self, epsig2exe_d['hash_result'], self.gui_get_options()), 
                 os.path.basename(bnkfile)))
 
+        if multi_logf == True and self.sign_log_files == True: 
+                logging.info("Signing file: " + outputfile)
+                self.signfileoutput(outputfile, outputfile)
+
+    def signfileoutput(self, infile, outfile):
+        h = epsig2.dohash_sha256(self, infile)
+        if h:
+            self.appendfileoutput(h, outfile)
+
+    def appendfileoutput(self, signature, outfile):   
+        logging.info('Signed log file hash: ' + signature.upper())             
+        with open (outfile, 'a') as f:
+            f.write("#---8<---------------------------------START--------------------------------------------\n")
+            f.write("# Remove this section to verify hash for: " + os.path.basename(outfile) + "\n")
+            f.write("# SHA256 hash: " + signature.upper() + "\n")
+            f.write("# IMPORTANT! To reconcile make sure there's an empty line at the bottom of this text file\n")
+            f.write("# ---------------------------------------END------------------------------------->8------")
+
     def write_to_logfile(self, filename, epsig2_p, bnkfile, multi_logf):
-        timestamp = datetime.timestamp(datetime.now())
+        # timestamp = datetime.timestamp(datetime.now())
+        timestamp_f = datetime.today().isoformat().replace(":","-")
+
         outputfile = ''
         outputdir = 'epsig2-logs'
         
@@ -217,30 +340,36 @@ class epsig2_gui(threading.Thread):
         if multi_logf == True: 
             if not os.path.exists(outputdir):
                 os.makedirs(outputdir)            
-            outputfile = outputdir + "/" + filename[:-4] + "-" + str(timestamp) + ".log"
+            head, bnk_filename = os.path.split(bnkfile)
+            manufacturer = head.split('/')[3] 
+
+            outputfile = outputdir + "/" + manufacturer + "-" + bnk_filename[:-4] + "-" + str(timestamp_f) + ".log"
         else: # Single log file that's overwritten
             outputfile = filename
 
         with open(outputfile, 'a+') as outfile:
-            outfile.writelines("#--8<-----------GENERATED: " + 
-                str(datetime.fromtimestamp(timestamp)) + " --------------------------\n")
+            outfile.writelines("---8<-----------GENERATED: " + 
+                #  str(datetime.fromtimestamp(timestamp)) + " --------------------------\n")
+                timestamp_f +  " by: " + getpass.getuser()  +  " --------------------------\n")
             outfile.writelines("Processsed: " + bnkfile + "\n")
             # outfile.writelines("%40s \t %40s \t %60s\n" % ("SEED", "HASH", "FILENAME"))
             my_seed = ''
-            outfile.writelines("%-40s \t %-40s \t %-60s\n" % ("Seed", "Hash", "Filename"))
+            outfile.writelines("%-40s\t%-65s\t%-60s\n" % ("Seed", "Hash", "Filename"))
             for item in epsig2_p.LogOutput:
-                outfile.writelines("%40s \t %40s \t %-60s\n" % (epsig2.format_output(self, str(item['seed']), self.gui_get_options()), 
+                outfile.writelines("%40s\t%65s\t%-60s\n" % (epsig2.format_output(self, str(item['seed']), self.gui_get_options()), 
                     epsig2.format_output(self, str(item['hash']), self.gui_get_options()), item['filename']))
                 my_seed = str(item['seed'])
 
             if epsig2_p.filepath.upper().endswith('.BNK'): 
-                outfile.writelines("%40s \t %40s \t XOR\n" % (epsig2.format_output(self, my_seed, self.gui_get_options()), 
+                outfile.writelines("%40s\t%65s\tXOR\n" % (epsig2.format_output(self, my_seed, self.gui_get_options()), 
                     epsig2.format_output(self, epsig2_p.xor_result.replace(" ", ""), self.gui_get_options())))
             else: 
-                outfile.writelines("%40s \t %40s \t Formatted Output\n" % (epsig2.format_output(self, my_seed, self.gui_get_options()), 
+                outfile.writelines("%40s\t%65s\tFormatted Output\n" % (epsig2.format_output(self, my_seed, self.gui_get_options()), 
                     epsig2.format_output(self, epsig2_p.xor_result.replace(" ", ""), self.gui_get_options())))
 
-
+        if multi_logf == True and self.sign_log_files == True: 
+                logging.info("Signing file..." + outputfile)
+                self.signfileoutput(outputfile, outputfile)
 
     # Returns flipped bits of full length
     def getClubsQSIM_Expected_output(self, text): 
@@ -315,7 +444,7 @@ class epsig2_gui(threading.Thread):
 
             # need to log if cache hit? 
         else: 
-            new_cache_list = list() 
+            new_cache_list = list()
             if filepath.upper().endswith('BNK'): 
                 # BNK file
                 if self.use_epsigexe.get() == 1: 
@@ -570,14 +699,15 @@ class epsig2_gui(threading.Thread):
 
         menubar = tk.Menu(self.root)
         filemenu = tk.Menu(menubar, tearoff=0)
-        #optionmenu = tk.Menu(menubar, tearoff=1)
+        optionmenu = tk.Menu(menubar, tearoff=0)
         helpmenu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="File", menu=filemenu)
-        # menubar.add_cascade(label="Option", menu=optionmenu)
+        menubar.add_cascade(label="Option", menu=optionmenu)
         menubar.add_cascade(label="Help", menu=helpmenu)
         filemenu.add_command(label="Exit", command=self.root.destroy)
         helpmenu.add_command(label="About...", command=self.about_window)
         #optionmenu.add_command(label="Preferences...", command=self.MenuBar_Config) # start this script now. 
+        optionmenu.add_command(label="Verify signed log file...", command=self.verify_signed_logfile) # start this script now. 
         
         self.root.config(menu=menubar)
         
@@ -756,19 +886,19 @@ class epsig2_gui(threading.Thread):
         self.logtimestamp.set(0)
         self.cb_logtimestamp = Checkbutton(
             frame_checkbuttons, 
-            text="Multiple Log Files: epsig2-logs/", 
+            text="Multiple Log Files: 'epsig2-logs/'", 
             justify=LEFT, 
             variable = self.logtimestamp, 
             onvalue=1, 
             offvalue=0)
-        self.cb_logtimestamp.grid(row=8, column=1, sticky='w',)
+        self.cb_logtimestamp.grid(row=8, column=1, sticky='e',)
 
         # epsig.exe BNK file validate
         self.use_epsigexe = IntVar() 
         self.use_epsigexe.set(1) 
         self.cb_epsigexe = Checkbutton(
             frame_checkbuttons, 
-            text="epsig.exe to verify BNK file formats", 
+            text="epsig3_7.exe to verify BNK file formats", 
             justify=LEFT, 
             variable = self.use_epsigexe, 
             onvalue=1, 

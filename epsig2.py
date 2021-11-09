@@ -79,7 +79,8 @@ class BNKEntry:
         assert(fields[1] in ACCEPTABLE_HASH_ALGORITHMS), "unknown hash algorithm"
         self.hash_type = fields[1] 
 
-        assert(fields[2] == 'p'), "must be a 'p'"
+        err_msg = "must be a 'p': " + ' '.join(fields)
+        assert(fields[2] == 'p'), err_msg
         self.hash_type = fields[1] 
 
     def toJSON(self): 

@@ -13,3 +13,5 @@ epsig2_cachefile_test_empty.json
 /epsig2-logs
 /bnkfiles
 *.sublime-workspace
+*.sublime-workspace
+*.json
