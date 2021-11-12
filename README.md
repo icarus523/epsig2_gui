@@ -60,6 +60,8 @@ Where:-
 - for BIN files, it uses python functions to calculate hash values
 
 ### v2.1
-- addressed issue with output stripping starting '0'
 - now can log back to files for BIN/BNK files, including separate log files. 
 - added support to disable epsig.exe for BNK files (if needed)
+- if separate log files are used, the script will sign the log file which can also be verified with a new function in the Options menu
+- log files are now named in the format: MANUFACTURER-BIN/BNK FILENAME-TIMESTAMP.log
+- epsig.exe is now verbose - refer logging.

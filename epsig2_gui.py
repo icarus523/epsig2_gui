@@ -59,6 +59,9 @@
 # v2.1  - addressed issue with output stripping starting '0'
 #       - now can log back to files for BIN/BNK files, including separate log files. 
 #       - added support to disable epsig.exe for BNK files (if needed)
+#       - if separate log files are used, the script will sign the log file which can also be verified with a new function in the Options menu
+#       - log files are now named in the format: MANUFACTURER-BIN/BNK FILENAME-TIMESTAMP.log
+#       - epsig.exe is now verbose - refer logging.
 import os
 import sys
 import csv
@@ -140,7 +143,7 @@ class epsig2_gui(threading.Thread):
         # delete existing file
         if os.path.isfile(outfile): 
             os.remove(outfile)
-            
+
         with open(fname,'r') as oldfile, open(outfile, 'w+') as newfile:
             for line in oldfile:
                 if line.startswith('#'):
@@ -239,36 +242,47 @@ class epsig2_gui(threading.Thread):
             return None
 
         # the following will block
-        proc = subprocess.run([EPSIGEXE_PATH, fname, seed], capture_output=True) #stdout=subprocess.PIPE
+        # proc = subprocess.run([EPSIGEXE_PATH, fname, seed], capture_output=True) #stdout=subprocess.PIPE
 
-        # p = Popen([EPSIGEXE_PATH, fname, seed], stdout=PIPE, bufsize=1, close_fds=ON_POSIX)
-        # q = Queue()
-        # t = Thread(target=self.enqueue_output, args=(p.stdout, q))
-        # t.daemon = True # thread dies with the program
-        # t.start()
+        proc = Popen([EPSIGEXE_PATH, fname, seed], stdout=PIPE, stderr=PIPE, bufsize=1, close_fds=ON_POSIX)
+        q = Queue()
+        t = Thread(target=epsig2_gui.enqueue_output, args=(self, proc.stdout, q))
+        t.daemon = True # thread dies with the program
+        t.start()
 
-        # # read line without blocking
-        # try:  
-        #     line = q.get_nowait() # or q.get(timeout=.1)
-        # except Empty:
-        #     print('no output yet')
-        # else: # got line
-        #     # ... do something with line
-        #     logging.info("epsig.exe: " + line)   
-
-        err = proc.stderr.decode('utf-8')
-        stdout = proc.stdout.decode('utf-8').split("\r\n")
-        stdout = [i for i in stdout if i] # remove empty strings 
+        output_l = list() 
+        complete = False 
+        epsig_exe_fail = False
+        while not complete: 
+            time.sleep(1)
+            # read line without blocking
+            try:  
+                line = q.get_nowait() # or q.get(timeout=.1)
+            except Empty:
+                print('.', end='')
+            else: # got line
+                # decode & clean
+                s = line.decode('utf-8').strip()
+                logging.info("epsig.exe: " + s)
+                output_l.append(s) 
+                if s.endswith("(LSB First i.e. HMAC-SHA1)"): 
+                    complete = True
+                # handle all epsig.exe fails. 
+                if 'Critical' in s: 
+                    complete = True 
+                    epsig_exe_fail = True
+                    err = "epsig.exe: Critical! refer to logging for more info"
         
         result_l = list() 
-        for row in stdout: 
-            if row.startswith('Hash'): 
-                result_l.append(row)
+        if not epsig_exe_fail: 
+            for row in output_l: 
+                if row.startswith('Hash'): 
+                    result_l.append(row)
 
         # convert epsig.exe output to a dict
         rv = dict() 
         rv['err'] = err
-        rv['stdout'] = stdout
+        rv['stdout'] = output_l 
         rv['results'] = result_l
 
         hash_results_l = list() 
@@ -276,13 +290,16 @@ class epsig2_gui(threading.Thread):
             results = item.split(' ')
             hash_results_l.append(results[2])
 
-        rv['returncode'] = proc.returncode == 0
+        # dummy up returncode from epsig.exe
+        if not epsig_exe_fail and len(hash_results_l[0]) > 0 and len(hash_results_l[1]) > 0: # i.e. two results
+            rv['returncode'] = True 
+        else:
+            rv['returncode'] = False
 
         if fname.upper().endswith('BNK') and rv['returncode'] == True: 
-            rv['hash_result'] = hash_results_l[1]   # return result
+             rv['hash_result'] = hash_results_l[1]   # return result
 
         return rv
-
 
     def write_to_logfile2(self, filename, epsig2exe_d, bnkfile, multi_logf):
         #timestamp = datetime.timestamp(datetime.now())
@@ -450,8 +467,8 @@ class epsig2_gui(threading.Thread):
             if filepath.upper().endswith('BNK'): 
                 # BNK file
                 if self.use_epsigexe.get() == 1: 
-                    epsigexe_output = self.epsigexe_start(filepath, self.seed.seed)
-                    if epsigexe_output['returncode'] == True:
+                    epsigexe_output = self.epsigexe_start2(filepath, self.seed.seed)
+                    if epsigexe_output and epsigexe_output['returncode'] == True:
                         localhash = epsigexe_output['hash_result']
 
                         seed_info = { 
@@ -490,7 +507,7 @@ class epsig2_gui(threading.Thread):
                         self.filepath = None
 
                     # def write_to_logfile2(self, filename, epsig2exe_d, bnkfile, multi_logf):
-                    if self.writetolog.get() == 1: 
+                    if self.filepath and self.writetolog.get() == 1: 
                         self.write_to_logfile2(EPSIG_LOGFILE, epsigexe_output, self.filepath, self.logtimestamp.get() == 1)                
 
                 else: 
