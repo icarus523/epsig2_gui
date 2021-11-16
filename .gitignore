@@ -16,3 +16,4 @@ epsig2_cachefile_test_empty.json
 *.sublime-workspace
 *.json
 epsig2.sublime-workspace
+*.sublime-workspace

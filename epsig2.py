@@ -71,6 +71,8 @@ class BNKEntry:
         # filenameX The filename+ext of a binary image (max 250 chars and must not contain spaces)
         assert(len(fields[0]) < 250), "filename max 250 chars"
         assert(" " not in fields[0]), "filename must not contain spaces"
+        # split_tuple = os.path.splitext(fields[0])
+        # assert(len(split_tuple) == 2),"only one file extension is allowed"
         self.fname = fields[0] 
 
         #algX       The hash algorithm designation type to be used for the image.

@@ -11,8 +11,8 @@ from epsig2 import epsig2
 BNK_FILE_REMOTE = 'G:/OLGR-TECHSERV/BINIMAGE/KONAMI/1645GDXX_393_004.BNK'
 BNK_FILE_LOCAL = 'bnkfiles/5D81F_W4QLQ05M.BNK'
 BIN_FILE_LOCAL = 'bnkfiles/A35E4_35I_CSC_Q0A_QB.BIN'
-BNK_FILE_LOCAL_BAD = 'bnkfiles/5D81F_W4QLQ05M_2.BNK'
-
+BNK_FILE_LOCAL_BAD = 'bnkfiles/5D81F_W4QLQ05M_2.BNK' # missing 'p'
+BNK_FILE_LOCAL_BAD2 = 'bnkfiles/5D81F_W4QLQ05M_3.BNK' # two file suffixes
 class test_epsig2gui_functions(epsig2GUI_TestClient):   
 
 # CompletedProcess(args=['G:/OLGR-TECHSERV/BINIMAGE/epsig3_7.exe', 'G:/OLGR-TECHSERV/BINIMAGE/KONAMI/1645GDXX_393_004.BNK', '0000000000000000000000000000000000000000000000000000000000000000'], 
@@ -159,7 +159,7 @@ class test_epsig2gui_functions(epsig2GUI_TestClient):
 
     @unittest.skipIf(os.path.isfile(BNK_FILE_LOCAL) == False, "file not found")
     def test_epsig2gui_start2_bad_bnkfile_format(self): 
-        self.bnkfile = BNK_FILE_LOCAL_BAD
+        self.bnkfile = BNK_FILE_LOCAL_BAD # W4QLQ05M.sigs SHA1 
         self.seed = '0000000000000000000000000000000000000000'
         self.mandir = os.path.dirname(self.bnkfile)
         self.options_d['cache_file_f'] = False 
@@ -173,3 +173,20 @@ class test_epsig2gui_functions(epsig2GUI_TestClient):
 
         epsigexe_output = epsig2_gui.epsigexe_start2(self, self.bnkfile, self.seed)
         self.assertFalse(epsigexe_output['returncode'], epsigexe_output['returncode'])    
+
+    @unittest.skipIf(os.path.isfile(BNK_FILE_LOCAL_BAD2) == False, "file not found")
+    def test_two_file_suffixes_in_bnkfile(self): 
+        self.bnkfile = BNK_FILE_LOCAL_BAD2 # W4QLQ05M.sigs.sha1
+        self.seed = '0000000000000000000000000000000000000000'
+        self.mandir = os.path.dirname(self.bnkfile)
+        self.options_d['cache_file_f'] = False 
+        self.LogOutput = list() 
+        self.selectedHashtype = 'HMAC-SHA1'    
+        
+        self.options_d['selectedHashtype'] = self.selectedHashtype   
+        self.options_d['uppercase'] = False
+
+        self.seed = Seed('0000000000000000000000000000000000000000', self.selectedHashtype).seed
+
+        epsigexe_output = epsig2_gui.epsigexe_start2(self, self.bnkfile, self.seed)
+        self.assertFalse(epsigexe_output['returncode'], epsigexe_output['returncode'])        

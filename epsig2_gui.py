@@ -272,6 +272,8 @@ class epsig2_gui(threading.Thread):
                     complete = True 
                     epsig_exe_fail = True
                     err = "epsig.exe: Critical! refer to logging for more info"
+                else: 
+                    err = ''
         
         result_l = list() 
         if not epsig_exe_fail: 
