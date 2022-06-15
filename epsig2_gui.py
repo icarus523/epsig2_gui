@@ -818,7 +818,7 @@ class epsig2_gui(threading.Thread):
         frame_textarea.config(relief = RIDGE, borderwidth = 2)
 
         # Text Area output of BNK file generation
-        self.text_BNKoutput = Text(frame_textarea, height=25, width =80)
+        self.text_BNKoutput = Text(frame_textarea, height=10, width =80)
         myscrollbar = Scrollbar(frame_textarea, command=self.text_BNKoutput.yview)
         myscrollbar.pack(side=RIGHT, fill=Y)
         self.text_BNKoutput.configure(yscrollcommand=myscrollbar.set)
