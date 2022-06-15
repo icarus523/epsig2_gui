@@ -16,6 +16,8 @@ class test_epsig2_functions(epsig2GUI_TestClient):
 # [Finished in 250.6s]
 
     def test_epsigexe_dobnk(self): 
+
+        expected_result = 'FC1FE2617F2B5EF0C0652FB8D1345738782E6468000000000000000000000000'
         self.bnkfile = 'bnkfiles/5D81F_W4QLQ05M.BNK'
         self.seed = '0000000000000000000000000000000000000000'
         self.mandir = os.path.dirname(self.bnkfile)
@@ -23,16 +25,16 @@ class test_epsig2_functions(epsig2GUI_TestClient):
         self.LogOutput = list() 
         self.selectedHashtype = 'HMAC-SHA1'    
         self.options_d['selectedHashtype'] = self.selectedHashtype   
+        self.options_d['use_epsigexe'] = True
 
         self.seed = Seed('0000000000000000000000000000000000000000', self.selectedHashtype).seed
 
-        epsigexe_output = epsig2_gui.epsigexe(self, self.bnkfile, self.seed)
-        
-        print(epsigexe_output['hash_result'], self.bnkfile)
+        epsigexe_output = epsig2_gui.epsigexe_start2(self, self.bnkfile, self.seed)
 
-        self.assertTrue(epsigexe_output['returncode'], epsigexe_output['returncode'])
+        self.assertTrue(epsigexe_output['returncode'])        
+        self.assertEqual(epsigexe_output['hash_result'], expected_result)
 
-    def test_epsigexe_functions(self): 
+    def test_epsigexe_bnkfile_validate(self): 
         self.bnkfile = 'bnkfiles/5D81F_W4QLQ05M.BNK'
         self.seed = '0000000000000000000000000000000000000000'
         self.mandir = os.path.dirname(self.bnkfile)
@@ -40,22 +42,21 @@ class test_epsig2_functions(epsig2GUI_TestClient):
         self.LogOutput = list() 
         self.selectedHashtype = 'HMAC-SHA1'    
         self.options_d['selectedHashtype'] = self.selectedHashtype   
+        self.options_d['use_epsigexe'] = True
 
         self.seed = Seed('0000000000000000000000000000000000000000', self.selectedHashtype).seed
 
         epsigexe_output = epsig2.bnkfile_validate_epsigexe(self, self.bnkfile, self.seed)
         self.assertTrue(epsigexe_output['returncode'])
 
-        for item in epsigexe_output['results']: 
-            print(item)
+        # for item in epsigexe_output['results']: 
+        #     print(item)
 
     def test_verifyFileExists(self): 
-        print(self.bnkfile)
         self.assertTrue(epsig2.verifyFileExists(None, self.bnkfile))
 
     def test_verifyFileExists2(self): 
         self.bnkfile = 'G:/OLGR-TECHSERV/BINIMAGE/KONAMI/1645GDXX_393_004.BNK'
-        print(self.bnkfile)
         self.seed = '0000000000000000000000000000000000000000'
         self.selectedHashtype = 'HMAC-SHA1'    
         self.options_d['selectedHashtype'] = self.selectedHashtype   
@@ -65,7 +66,7 @@ class test_epsig2_functions(epsig2GUI_TestClient):
         epsigexe_output = epsig2.bnkfile_validate_epsigexe(self, self.bnkfile, self.seed)
         self.assertTrue(epsigexe_output['returncode'])
 
-    def test_dobnk_SHA1(self): 
+    def test_dobnk_SHA1_no_epsigexe(self): 
         self.bnkfile = 'bnkfiles/5D81F_W4QLQ05M.BNK'
         self.seed = '0000000000000000000000000000000000000000'
         self.mandir = os.path.dirname(self.bnkfile)
@@ -73,6 +74,7 @@ class test_epsig2_functions(epsig2GUI_TestClient):
         self.LogOutput = list() 
         self.selectedHashtype = 'HMAC-SHA1'    
         self.options_d['selectedHashtype'] = self.selectedHashtype        
+        self.options_d['use_epsigexe'] = False
 
         self.seed = Seed('0000000000000000000000000000000000000000', self.selectedHashtype).seed
 
@@ -83,8 +85,27 @@ class test_epsig2_functions(epsig2GUI_TestClient):
 
         self.assertEqual(formatted_h, expected_result)
 
+    def test_dobnk_SHA1_epsigexe(self): 
+        self.bnkfile = 'bnkfiles/5D81F_W4QLQ05M.BNK'
+        self.seed = '0000000000000000000000000000000000000000'
+        self.mandir = os.path.dirname(self.bnkfile)
+        self.options_d['cache_file_f'] = True 
+        self.LogOutput = list() 
+        self.selectedHashtype = 'HMAC-SHA1'    
+        self.options_d['selectedHashtype'] = self.selectedHashtype        
+        self.options_d['use_epsigexe'] = True
 
-    def test_dobnk_SHA256(self): 
+        self.seed = Seed('0000000000000000000000000000000000000000', self.selectedHashtype).seed
+
+        expected_result = '0XFC1FE2617F2B5EF0C0652FB8D1345738782E6468'
+
+        h = epsig2.dobnk(self, self.bnkfile, blocksize=8192)
+        formatted_h = epsig2.format_output(self, str(h), self.options_d) 
+
+        self.assertEqual(formatted_h, expected_result)
+
+
+    def test_dobnk_SHA256_no_epsigexe(self): 
         self.bnkfile = 'bnkfiles/5D81F_W4QLQ05M.BNK'
         self.mandir = os.path.dirname(self.bnkfile)
         self.options_d['cache_file_f'] = False 
@@ -92,6 +113,7 @@ class test_epsig2_functions(epsig2GUI_TestClient):
         self.selectedHashtype = 'HMAC-SHA256'    
         self.options_d['selectedHashtype'] = self.selectedHashtype        
         self.seed = Seed('0000000000000000000000000000000000000000000000000000000000000000', self.selectedHashtype).seed
+        self.options_d['use_epsigexe'] = False
 
         expected_result = '000000000000000000000000FC1FE2617F2B5EF0C0652FB8D1345738782E6468'
 
@@ -100,8 +122,26 @@ class test_epsig2_functions(epsig2GUI_TestClient):
 
         self.assertEqual(formatted_h, expected_result)
 
+    def test_dobnk_SHA256_epsigexe(self): 
+        self.bnkfile = 'bnkfiles/5D81F_W4QLQ05M.BNK'
+        self.mandir = os.path.dirname(self.bnkfile)
+        self.options_d['cache_file_f'] = False 
+        self.LogOutput = list() 
+        self.selectedHashtype = 'HMAC-SHA256'    
+        self.options_d['selectedHashtype'] = self.selectedHashtype        
+        self.seed = Seed('0000000000000000000000000000000000000000000000000000000000000000', self.selectedHashtype).seed
+        self.options_d['use_epsigexe'] = True
 
-    def test_format_output(self): 
+        # expected_result = '0X000000000000000000000000FC1FE2617F2B5EF0C0652FB8D1345738782E6468'
+        expected_result = '0XFC1FE2617F2B5EF0C0652FB8D1345738782E6468'
+
+        h = epsig2.dobnk(self, self.bnkfile, blocksize=8192)
+        formatted_h = epsig2.format_output(self, str(h), self.options_d) 
+
+        self.assertEqual(formatted_h, expected_result)
+
+
+    def test_format_output_no_epsigexe(self): 
         inputstr = '0x94C5809DEA787F1584A5CA6CFDF4210A9E831018'
 
         self.options_d['cache_file_f'] = False
@@ -110,11 +150,28 @@ class test_epsig2_functions(epsig2GUI_TestClient):
         self.options_d['reverse'] = False
         self.options_d['usr_cache_file'] = False
         self.selectedHashtype = 'HMAC-SHA1'
-        self.options_d['selectedHashtype'] = self.selectedHashtype        
+        self.options_d['selectedHashtype'] = self.selectedHashtype 
+        self.options_d['use_epsigexe'] = False        
+
         output_str = epsig2.format_output(self, inputstr, self.options_d)
         self.assertEqual(output_str, '94C5809DEA787F1584A5CA6CFDF4210A9E831018')
 
-    def test_format_output_uppercase(self): 
+    def test_format_output_epsigexe(self): 
+        inputstr = '0x94C5809DEA787F1584A5CA6CFDF4210A9E831018'
+
+        self.options_d['cache_file_f'] = False
+        self.options_d['uppercase'] = True
+        self.options_d['eightchar'] = False
+        self.options_d['reverse'] = False
+        self.options_d['usr_cache_file'] = False
+        self.selectedHashtype = 'HMAC-SHA1'
+        self.options_d['selectedHashtype'] = self.selectedHashtype 
+        self.options_d['use_epsigexe'] = True        
+
+        output_str = epsig2.format_output(self, inputstr, self.options_d)
+        self.assertEqual(output_str, '0X94C5809DEA787F1584A5CA6CFDF4210A9E831018')
+
+    def test_format_output_uppercase_no_epsigexe(self): 
         inputstr = '92971beb3f6d486bdb86402e8e9e2c726d1173d7999f3f7188f3884663181ff0'
 
         self.options_d['cache_file_f'] = False
@@ -123,9 +180,25 @@ class test_epsig2_functions(epsig2GUI_TestClient):
         self.options_d['reverse'] = False
         self.options_d['usr_cache_file'] = False
         self.selectedHashtype = 'HMAC-SHA256'
-        self.options_d['selectedHashtype'] = self.selectedHashtype        
+        self.options_d['selectedHashtype'] = self.selectedHashtype  
+        self.options_d['use_epsigexe'] = False                      
         output_str = epsig2.format_output(self, inputstr, self.options_d)
         self.assertEqual(output_str, '92971BEB3F6D486BDB86402E8E9E2C726D1173D7999F3F7188F3884663181FF0')
+
+    def test_format_output_uppercase_epsigexe(self): 
+        inputstr = '92971beb3f6d486bdb86402e8e9e2c726d1173d7999f3f7188f3884663181ff0'
+
+        self.options_d['cache_file_f'] = False
+        self.options_d['uppercase'] = True
+        self.options_d['eightchar'] = False
+        self.options_d['reverse'] = False
+        self.options_d['usr_cache_file'] = False
+        self.selectedHashtype = 'HMAC-SHA256'
+        self.options_d['selectedHashtype'] = self.selectedHashtype  
+        self.options_d['use_epsigexe'] = True                      
+        output_str = epsig2.format_output(self, inputstr, self.options_d)
+        self.assertEqual(output_str, '92971BEB3F6D486BDB86402E8E9E2C726D1173D7999F3F7188F3884663181FF0')
+
 
     def test_format_output_eight_char_spacing(self): 
         inputstr = '92971beb3f6d486bdb86402e8e9e2c726d1173d7999f3f7188f3884663181ff0'
@@ -168,12 +241,12 @@ class test_epsig2_functions(epsig2GUI_TestClient):
 
         self.assertEqual(h, expected_result)
 
-    def test_insert_spaces(self): 
-        input_str = '1234567890abcdefghijklmnopqrstuvwxyz1234'
+    # def test_insert_spaces(self): 
+    #     input_str = '1234567890abcdefghijklmnopqrstuvwxyz1234'
 
-        output_str = epsig2.insert_spaces(self, input_str, s_range=8)
+    #     output_str = epsig2.insert_spaces(self, input_str, s_range=8)
 
-        self.assertEqual(output_str, '12345678 90abcdef ghijklmn opqrstuv wxyz1234')
+    #     self.assertEqual(output_str, '12345678 90abcdef ghijklmn opqrstuv wxyz1234')
 
     def test_checkCacheFilenameSeedAlg_BNK(self): 
         self.seed = '0000000000000000000000000000000000000000'
@@ -223,7 +296,7 @@ class test_epsig2_functions(epsig2GUI_TestClient):
             reader = csv.DictReader(infile, delimiter=' ', fieldnames = fdname)
             for row in reader: 
                 fp = self.mandir + "/" + str(row['fname'])
-                hash_value = epsig2.checkCacheFilename_BNK(self, fp, self.seed, row['type'].upper())
+                hash_value = epsig2.checkCacheFilename(self, fp, self.seed, row['type'].upper())
 
                 if fp == "bnkfiles/5D81F.sigs": 
                     self.assertEqual(hash_value, '387a1d858b2f32d7f8074f2b33b673b8f5f42339')

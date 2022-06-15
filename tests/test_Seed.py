@@ -1,7 +1,7 @@
 import unittest
 
 from epsig2GUI_TestClient import epsig2GUI_TestClient
-from epsig2_gui import epsig2, Seed
+from epsig2 import epsig2, Seed
 
 class test_Seed(epsig2GUI_TestClient): 
 

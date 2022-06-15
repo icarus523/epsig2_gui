@@ -569,7 +569,7 @@ class epsig2():
                 outputstr = inputstr.lstrip('0X').lstrip('0x').zfill(40) #strip 0x first
             elif options_d['selectedHashtype'] == 'HMAC-SHA256': 
                 outputstr = inputstr.lstrip('0X').lstrip('0x').zfill(64) #strip 0x first
-
+            
         # include a space for every eight chars
         if (options_d['eightchar'] == True):
             s_range = 8

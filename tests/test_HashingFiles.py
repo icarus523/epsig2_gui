@@ -1,7 +1,7 @@
 import unittest
 
 from epsig2GUI_TestClient import epsig2GUI_TestClient
-from epsig2_gui import epsig2, Seed
+from epsig2 import epsig2, Seed
 
 class test_HashingFiles_file(epsig2GUI_TestClient):      
 
@@ -11,16 +11,18 @@ class test_HashingFiles_file(epsig2GUI_TestClient):
         hash_type = "HMAC-SHA1"
         my_seed = Seed(seed, hash_type)
         self.options_d['selectedHashtype'] = hash_type        
+        self.options_d['use_epsigexe'] = False
         
         myp = epsig2(my_seed.seed, self.bnkfile, self.options_d, self.cache_dict, hash_type)
         myp.processfile() 
-        self.assertEqual(epsig2.format_output(self, myp.xor_result, self.options_d),expected_result)
+        self.assertEqual(epsig2.format_output(self, myp.xor_result, self.options_d), expected_result)
 
     def test_dobnk_HMAC_SHA256(self): 
         seed = "0000000000000000000000000000000000000000000000000000000000000000"
         hash_type = "HMAC-SHA256"
         my_seed = Seed(seed, hash_type)
         self.options_d['selectedHashtype'] = hash_type        
+        self.options_d['use_epsigexe'] = False
 
         myp = epsig2(my_seed.seed, self.bnkfile, self.options_d, self.cache_dict, hash_type)
         myp.processfile() 
@@ -34,6 +36,7 @@ class test_HashingFiles_file(epsig2GUI_TestClient):
         hash_type = "HMAC-SHA1"
         my_seed = Seed(seed, hash_type)
         self.options_d['selectedHashtype'] = hash_type        
+        self.options_d['use_epsigexe'] = False
 
         myp = epsig2(my_seed.seed, self.binfile, self.options_d, self.cache_dict, hash_type)
         myp.processfile()         
@@ -44,6 +47,7 @@ class test_HashingFiles_file(epsig2GUI_TestClient):
         hash_type = "HMAC-SHA256"
         my_seed = Seed(seed, hash_type)
         self.options_d['selectedHashtype'] = hash_type        
+        self.options_d['use_epsigexe'] = False
 
         myp = epsig2(my_seed.seed, self.binfile, self.options_d, self.cache_dict, hash_type)
         myp.processfile() 

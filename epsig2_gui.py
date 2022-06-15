@@ -186,44 +186,44 @@ class epsig2_gui(threading.Thread):
 
         return rv
 
-    def epsigexe_start(self, fname, seed): 
-        if not os.path.isfile(EPSIGEXE_PATH):
-            logging.error("epsig.exe cannot be found in: " + EPSIGEXE_PATH)
-            return None
+    # def epsigexe_start(self, fname, seed): 
+    #     if not os.path.isfile(EPSIGEXE_PATH):
+    #         logging.error("epsig.exe cannot be found in: " + EPSIGEXE_PATH)
+    #         return None
 
-        if ' ' in os.path.basename(fname): 
-            logging.error("no spaces allowed in filename: " + os.path.basename(fname))
-            return None
+    #     if ' ' in os.path.basename(fname): 
+    #         logging.error("no spaces allowed in filename: " + os.path.basename(fname))
+    #         return None
 
-        # the following will block
-        proc = subprocess.run([EPSIGEXE_PATH, fname, seed], capture_output=True) #stdout=subprocess.PIPE
+    #     # the following will block
+    #     proc = subprocess.run([EPSIGEXE_PATH, fname, seed], capture_output=True) #stdout=subprocess.PIPE
 
-        err = proc.stderr.decode('utf-8')
-        stdout = proc.stdout.decode('utf-8').split("\r\n")
-        stdout = [i for i in stdout if i] # remove empty strings 
+    #     err = proc.stderr.decode('utf-8')
+    #     stdout = proc.stdout.decode('utf-8').split("\r\n")
+    #     stdout = [i for i in stdout if i] # remove empty strings 
         
-        result_l = list() 
-        for row in stdout: 
-            if row.startswith('Hash'): 
-                result_l.append(row)
+    #     result_l = list() 
+    #     for row in stdout: 
+    #         if row.startswith('Hash'): 
+    #             result_l.append(row)
 
-        # convert epsig.exe output to a dict
-        rv = dict() 
-        rv['err'] = err
-        rv['stdout'] = stdout
-        rv['results'] = result_l
+    #     # convert epsig.exe output to a dict
+    #     rv = dict() 
+    #     rv['err'] = err
+    #     rv['stdout'] = stdout
+    #     rv['results'] = result_l
 
-        hash_results_l = list() 
-        for item in rv['results']:
-            results = item.split(' ')
-            hash_results_l.append(results[2])
+    #     hash_results_l = list() 
+    #     for item in rv['results']:
+    #         results = item.split(' ')
+    #         hash_results_l.append(results[2])
 
-        rv['returncode'] = proc.returncode == 0
+    #     rv['returncode'] = proc.returncode == 0
 
-        if fname.upper().endswith('BNK') and rv['returncode'] == True: 
-            rv['hash_result'] = hash_results_l[1]   # return result
+    #     if fname.upper().endswith('BNK') and rv['returncode'] == True: 
+    #         rv['hash_result'] = hash_results_l[1]   # return result
 
-        return rv
+    #     return rv
 
     def enqueue_output(self, out, queue):
         for line in iter(out.readline, b''):

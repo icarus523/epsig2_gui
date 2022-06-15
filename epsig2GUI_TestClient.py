@@ -15,14 +15,14 @@ class epsig2GUI_TestClient(unittest.TestCase):
         elif (os.name == 'nt' and USE_NETWORK_DRIVES == False):
             self.bnkfile = 'bnkfiles/5D81F_W4QLQ05M.BNK'
             self.bnkfile2 = 'bnkfiles/Test_Game.BNK'
-            self.binfile = 'tests/A35E4_35I_CSC_Q0A_QB.bin'
+            self.binfile = 'bnkfiles/A35E4_35I_CSC_Q0A_QB.bin'
 
         elif (os.name == 'posix'): # Linux OS
             self.bnkfile = 'bnkfiles/5D81F_W4QLQ05M.BNK'
             self.bnkfile2 = 'bnkfiles/Test_Game.BNK'
             self.bnkfile_list = [ self.bnkfile , self.bnkfile2 ]
 
-            self.binfile = 'tests/A35E4_35I_CSC_Q0A_QB.bin'
+            self.binfile = 'bnkfiles/A35E4_35I_CSC_Q0A_QB.bin'
 
         self.options_d = dict() 
         self.options_d['cache_file_f'] = False
