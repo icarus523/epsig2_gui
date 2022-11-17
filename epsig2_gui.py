@@ -62,6 +62,10 @@
 #       - if separate log files are used, the script will sign the log file which can also be verified with a new function in the Options menu
 #       - log files are now named in the format: MANUFACTURER-BIN/BNK FILENAME-TIMESTAMP.log
 #       - epsig.exe is now verbose - refer logging.
+# v2.2  - Added fix to display BNK file hash details if the option to use epsig3_7.exe is disabled. i.e. "run old version (v1.5)"
+#       - Swapped Clear Cache and Print Cache button around
+#       - Added colour to the buttons. 
+#       - minor gui fixes (sizing, text wrapping, etc.)
 import os
 import sys
 import csv
@@ -97,7 +101,7 @@ from queue import Queue, Empty
 
 from epsig2 import epsig2, CacheFile, BNKEntry, Seed, DEFAULT_CACHE_FILE
 
-VERSION = "2.1"
+VERSION = "2.2"
 
 EPSIG_LOGFILE = "epsig2.log"
 MAXIMUM_BLOCKSIZE_TO_READ = 65535
@@ -524,6 +528,17 @@ class epsig2_gui(threading.Thread):
                     if self.writetolog.get() == 1: 
                         self.write_to_logfile(EPSIG_LOGFILE, my_p, filepath, self.logtimestamp.get() == 1)      
 
+                    # update GUI
+                    for item in my_p.LogOutput:
+                        self.text_BNKoutput.insert(END, "%40s\t%40s\t%s\n" % (epsig2.format_output(self, str(item['seed']), self.gui_get_options()), 
+                            epsig2.format_output(self, str(item['hash']), self.gui_get_options()), item['filename']))
+
+                    if my_p.filepath.upper().endswith('.BNK'): 
+                        self.text_BNKoutput.insert(END, "%40s\t%40s\tXOR\n" % (epsig2.format_output(self, self.seed.seed, self.gui_get_options()), 
+                            epsig2.format_output(self, my_p.xor_result.replace(" ", ""), self.gui_get_options())))
+                    else: 
+                        self.text_BNKoutput.insert(END, "%40s\t%40s\tFormatted Output\n" % (epsig2.format_output(self, self.seed.seed, self.gui_get_options()), 
+                            epsig2.format_output(self, my_p.xor_result.replace(" ", ""), self.gui_get_options())))
             else: 
                 # BIN file, use epsig2 (i.e. python shasums)
                 my_p = epsig2(self.seed.seed, filepath, self.gui_get_options(), self.cache_dict, str(self.selectedHashtype.get())) 
@@ -559,9 +574,9 @@ class epsig2_gui(threading.Thread):
 
         # Format seed and XOR/Formatted Result
         seed_output = epsig2.format_output(self, self.seed.seed, self.gui_get_options())
-        str_output = epsig2.format_output(self, hash_result, self.gui_get_options())
+        hash_output = epsig2.format_output(self, hash_result, self.gui_get_options())
 
-        self.text_BNKoutput.insert(END, seed_output + "\t" + str_output + "\t" + os.path.basename(self.filepath + "\n"))
+        self.text_BNKoutput.insert(END, seed_output + "\t" + hash_output + "\t" + os.path.basename(self.filepath + "\n"))
     
     def handle_button_press(self, myButtonPress):
         
@@ -741,7 +756,7 @@ class epsig2_gui(threading.Thread):
         frame_toparea2.pack(side = TOP, fill=X, expand=False)
         frame_toparea2.config(relief = None, borderwidth = 2)
         
-        ttk.Label(frame_toparea2, justify=LEFT,
+        tk.Label(frame_toparea2, justify=LEFT, 
                                   text = 'GUI script to process BNK/BIN files (utilising epsig3_7.exe) - Please Select: ').pack(side=LEFT, padx=3, pady=3, fill=Y, expand=False, anchor='w')
 
         self.selectedHashtype = StringVar()
@@ -753,8 +768,12 @@ class epsig2_gui(threading.Thread):
         frame_bnkSelectionFrame.config(relief = RIDGE, borderwidth = 2)
         frame_bnkSelectionFrame.pack(side = TOP, padx  = 3, pady = 3, expand = False, fill=X, anchor = 'w')       
 
-        button_SelectedBNKfile = ttk.Button(frame_bnkSelectionFrame, text = "Select BNK/BIN file...", width=20, 
-                                                      command = lambda: self.handle_button_press('__selected_bnk_file__'))                                             
+        button_SelectedBNKfile = tk.Button(frame_bnkSelectionFrame, 
+            text = "Select BNK/BIN file...", 
+            fg = 'blue',
+            font = ('Helvetica', 10, 'bold'),
+            width=20, 
+            command = lambda: self.handle_button_press('__selected_bnk_file__'))                                             
         button_SelectedBNKfile.pack(side=LEFT, padx = 3, pady = 3, fill=X, expand=False)
         
         # Text Entry Selected BNK file
@@ -771,8 +790,11 @@ class epsig2_gui(threading.Thread):
         frame_SelectSeed.pack(side=TOP, fill=X, padx = 3, pady = 3, expand=True)
 
         # Button Selected Seed file (sl1)
-        button_Selectedsl1file = ttk.Button(frame_SeedFrame, 
-            text = "Seed or SL1/MSL file...", width = 20, 
+        button_Selectedsl1file = tk.Button(frame_SeedFrame, 
+            text = "Seed or SL1/MSL file...", 
+            fg = 'blue',
+            font = ('Helvetica', 10, 'bold'),
+            width = 20, 
             command = lambda: self.handle_button_press('__selected_seed_file__'))                                             
         button_Selectedsl1file.pack(side=LEFT, fill=X, padx = 3, pady = 3, expand=False)
 
@@ -904,10 +926,10 @@ class epsig2_gui(threading.Thread):
 
         # Timestamp logs
         self.logtimestamp = IntVar()
-        self.logtimestamp.set(0)
+        self.logtimestamp.set(1) 
         self.cb_logtimestamp = Checkbutton(
             frame_checkbuttons, 
-            text="Multiple Log Files: 'epsig2-logs/'", 
+            text="Multiple Log Files:\nRefer:'epsig2-logs/'", 
             justify=LEFT, 
             variable = self.logtimestamp, 
             onvalue=1, 
@@ -919,10 +941,11 @@ class epsig2_gui(threading.Thread):
         self.use_epsigexe.set(1) 
         self.cb_epsigexe = Checkbutton(
             frame_checkbuttons, 
-            text="epsig3_7.exe to verify BNK file formats", 
+            text="Use epsig3_7.exe to verify\nBNK file", 
             justify=LEFT, 
             variable = self.use_epsigexe, 
             onvalue=1, 
+            fg = 'red',
             offvalue=0)
         self.cb_epsigexe.grid(row=9, column=1, sticky='w',)
 
@@ -937,27 +960,31 @@ class epsig2_gui(threading.Thread):
         frame_controlbuttons.config(relief = RIDGE, borderwidth = 2)
         
         # Clear Button
-        self.button_clear = ttk.Button(
+        self.button_clear = tk.Button(
             frame_controlbuttons, 
             text = "Reset Form to Defaults", 
+            fg = 'orange',
             command = lambda: self.handle_button_press('__clear__'), 
             width = 20)
         self.button_clear.grid(row=1, column = 1, padx=5, pady=5, sticky='w',)
 
         # Clear Output
-        button_clear_output = ttk.Button(
+        button_clear_output = tk.Button(
             frame_controlbuttons, 
             text = "Clear Output Field",
+            fg = 'red',
             command = lambda: self.handle_button_press('__clear_output__'),
             width = 20)
         button_clear_output.grid(row=1, column=2, sticky='w', padx=5, pady=5)
 
         # Start Button
-        self.button_start = ttk.Button(
+        self.button_start = tk.Button(
             frame_controlbuttons, 
             text = "Generate Hash...",
             command = lambda: self.handle_button_press('__start__'), 
-            width = 20)
+            width = 20, 
+            font = ('Helvetica', 10, 'bold'),
+            fg='green')
         self.button_start.grid(row=1, column=3, sticky='w', padx=5, pady=5)
 
         ################ Bottom Cache FRAME ##############
@@ -980,26 +1007,32 @@ class epsig2_gui(threading.Thread):
         # Select Cache file button
         self.CacheFileButtonText = StringVar()
         self.CacheFileButtonText.set(DEFAULT_CACHE_FILE)
-        self.button_select_cache_button = ttk.Button(
+        self.button_select_cache_button = tk.Button(
             frame_cachebuttons, 
             textvariable = self.CacheFileButtonText,
+            fg = 'blue',
+            font = ('Helvetica', 10, 'bold'),
             command = lambda: self.handle_button_press('__select_cache_file__'))
         self.button_select_cache_button.grid(row=1, column=2, sticky='w', padx=3, pady=3)
         
-        # Print Cache Button
-        button_cache = ttk.Button(frame_cachebuttons, 
-            text = "Print Cache",
-            command = lambda: self.handle_button_press('__print_cache__'),
-            width = 20)
-        button_cache.grid(row=1, column=3, sticky='w', padx=5, pady=5)
-        
         # Clear Cache Button
-        self.button_clear_cache = ttk.Button(
+        self.button_clear_cache = tk.Button(
             frame_cachebuttons, 
             text = "Clear Cache",
+            fg = 'red',
             command = lambda: self.handle_button_press('__clear_cache__'), 
             width = 20)
-        self.button_clear_cache.grid(row=1, column=4, sticky='w', padx=5, pady=5)        
+        self.button_clear_cache.grid(row=1, column=3, sticky='w', padx=5, pady=5)        
+
+        # Print Cache Button
+        button_cache = tk.Button(frame_cachebuttons, 
+            text = "Print Cache",
+            fg = 'green',
+            font = ('Helvetica', 10, 'bold'),            
+            command = lambda: self.handle_button_press('__print_cache__'),
+            width = 20)
+        button_cache.grid(row=1, column=4, sticky='w', padx=5, pady=5)
+        
 
         self.root.mainloop()
         
