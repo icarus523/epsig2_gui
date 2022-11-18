@@ -460,8 +460,12 @@ class epsig2_gui(threading.Thread):
             cache_file = CacheFile(self.user_cache_file) 
             self.cache_dict = cache_file.cache_dict
 
+        # headers
+        self.text_BNKoutput.insert(END, "\nProcessing: " + filepath + "\n")            
+        self.text_BNKoutput.insert(END, ''.join([char*100 for char in '-']) + "\n") 
 
         cachedhit = self.check_cache_filename(filepath, self.seed.seed)        
+        
         if cachedhit != None: 
             localhash = cachedhit
             epsigexe_output = {} 
@@ -565,7 +569,6 @@ class epsig2_gui(threading.Thread):
             logging.debug(outputstr + "[" + str(threading.currentThread().getName()) + "]")
 
     def update_GUI_epsigexe(self, hash_result): 
-        self.text_BNKoutput.insert(END, "\nProcessing: " + self.filepath + "\n")            
         # logging.info("Seed is: " + self.seed.seed + " length is: " + str(len(self.seed.seed)))
         if self.filepath.upper().endswith('.BNK'): 
             self.text_BNKoutput.insert(END, "XOR Result: " + "\n")
