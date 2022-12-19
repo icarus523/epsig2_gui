@@ -345,7 +345,7 @@ class epsig2():
     def checkhexchars(self, text):
         return (all(c in string.hexdigits for c in text))            
 
-    def dobin(self, fname, blocksize):
+    def dobin(self, fname, blocksize=8192):
         #time.sleep(1)
         oh = "0000000000000000000000000000000000000000000000000000000000000000"
 
@@ -425,7 +425,7 @@ class epsig2():
 
 
     # limitations: currently only supports bnk file with SHA1 contents        
-    def dobnk(self, fname, blocksize):
+    def dobnk(self, fname, blocksize=8192):
         #time.sleep(1)
         cache_file = None
         outputstr = None
@@ -564,12 +564,12 @@ class epsig2():
     def format_output(self, inputstr, options_d):
         outputstr = inputstr
 
-        if options_d['use_epsigexe'] == False: 
-            if options_d['selectedHashtype'] == 'HMAC-SHA1': 
-                outputstr = inputstr.lstrip('0X').lstrip('0x').zfill(40) #strip 0x first
-            elif options_d['selectedHashtype'] == 'HMAC-SHA256': 
-                outputstr = inputstr.lstrip('0X').lstrip('0x').zfill(64) #strip 0x first
-            
+        # if options_d['use_epsigexe'] == False: 
+        if options_d['selectedHashtype'] == 'HMAC-SHA1': 
+            outputstr = inputstr.lstrip('0X').lstrip('0x').zfill(40) #strip 0x first
+        elif options_d['selectedHashtype'] == 'HMAC-SHA256': 
+            outputstr = inputstr.lstrip('0X').lstrip('0x').zfill(64) #strip 0x first
+        
         # include a space for every eight chars
         if (options_d['eightchar'] == True):
             s_range = 8

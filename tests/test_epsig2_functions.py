@@ -304,3 +304,29 @@ class test_epsig2_functions(epsig2GUI_TestClient):
                     self.assertEqual(hash_value, 'c6967f4f9240f15ea742f8d57b347b3142427e51')
                 elif fp == "bnkfiles/W4QLQ05M.sigs": 
                     self.assertEqual(hash_value, '6a29e257f317bc9cdbe07d92b576298329354d70')
+
+
+    def test_epsigexe_vs_epsig2py(self): 
+        self.seed = '0000000000000000000000000000000000000000'
+        self.bnkfile = 'G:/OLGR-TECHSERV/BINIMAGE/VID/A78B1_05L_CSD_50D_5B.bin'
+        self.mandir = os.path.dirname(self.bnkfile)
+
+        self.options_d['cache_file_f'] = False
+        self.options_d['uppercase'] = True
+        self.options_d['eightchar'] = False
+        self.options_d['reverse'] = True
+        self.options_d['usr_cache_file'] = False
+        self.selectedHashtype = 'HMAC-SHA1'
+        self.options_d['selectedHashtype'] = self.selectedHashtype 
+        self.options_d['use_epsigexe'] = False        
+
+        epsig2py_result = epsig2.dobin(self, self.bnkfile)
+        # output_str_epsig2py = epsig2.format_output(self, epsig2py_result, self.options_d)
+
+        self.options_d['use_epsigexe'] = True        
+        epsigexe_result = epsig2_gui.epsigexe_start2(self, self.bnkfile, self.seed)
+        # output_str_epsigexe = epsig2.format_output(self, epsigexe_result, self.options_d)
+
+        print(epsig2py_result, epsigexe_result)
+
+        # self.assertEqual(output_str_epsig2py, output_str_epsigexe)

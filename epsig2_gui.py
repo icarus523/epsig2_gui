@@ -66,6 +66,8 @@
 #       - Swapped Clear Cache and Print Cache button around
 #       - Added colour to the buttons. 
 #       - minor gui fixes (sizing, text wrapping, etc.)
+# v2.2.1 - Added fix for displaying results when hashing .BIN files when the option to use epsig.exe is selected
+#       - Added a message in the log, that using epsig.exe to hash .BIN files is not supported, and that epsig2.py will be used instead.
 import os
 import sys
 import csv
@@ -101,7 +103,7 @@ from queue import Queue, Empty
 
 from epsig2 import epsig2, CacheFile, BNKEntry, Seed, DEFAULT_CACHE_FILE
 
-VERSION = "2.2"
+VERSION = "2.2.1"
 
 EPSIG_LOGFILE = "epsig2.log"
 MAXIMUM_BLOCKSIZE_TO_READ = 65535
@@ -545,6 +547,10 @@ class epsig2_gui(threading.Thread):
                             epsig2.format_output(self, my_p.xor_result.replace(" ", ""), self.gui_get_options())))
             else: 
                 # BIN file, use epsig2 (i.e. python shasums)
+                # Note: epsigexe doesn't support BIN files
+                if self.use_epsigexe.get() == 1: 
+                    logging.info("epsig.exe doesn't support .BIN files, w/seed. Continuing using epsig2.py")
+
                 my_p = epsig2(self.seed.seed, filepath, self.gui_get_options(), self.cache_dict, str(self.selectedHashtype.get())) 
                 my_p.processfile()
 
