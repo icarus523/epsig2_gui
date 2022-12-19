@@ -97,7 +97,7 @@ class test_epsig2_functions(epsig2GUI_TestClient):
 
         self.seed = Seed('0000000000000000000000000000000000000000', self.selectedHashtype).seed
 
-        expected_result = '0XFC1FE2617F2B5EF0C0652FB8D1345738782E6468'
+        expected_result = 'FC1FE2617F2B5EF0C0652FB8D1345738782E6468'
 
         h = epsig2.dobnk(self, self.bnkfile, blocksize=8192)
         formatted_h = epsig2.format_output(self, str(h), self.options_d) 
@@ -132,8 +132,7 @@ class test_epsig2_functions(epsig2GUI_TestClient):
         self.seed = Seed('0000000000000000000000000000000000000000000000000000000000000000', self.selectedHashtype).seed
         self.options_d['use_epsigexe'] = True
 
-        # expected_result = '0X000000000000000000000000FC1FE2617F2B5EF0C0652FB8D1345738782E6468'
-        expected_result = '0XFC1FE2617F2B5EF0C0652FB8D1345738782E6468'
+        expected_result = '000000000000000000000000FC1FE2617F2B5EF0C0652FB8D1345738782E6468'
 
         h = epsig2.dobnk(self, self.bnkfile, blocksize=8192)
         formatted_h = epsig2.format_output(self, str(h), self.options_d) 
@@ -169,7 +168,7 @@ class test_epsig2_functions(epsig2GUI_TestClient):
         self.options_d['use_epsigexe'] = True        
 
         output_str = epsig2.format_output(self, inputstr, self.options_d)
-        self.assertEqual(output_str, '0X94C5809DEA787F1584A5CA6CFDF4210A9E831018')
+        self.assertEqual(output_str, '94C5809DEA787F1584A5CA6CFDF4210A9E831018')
 
     def test_format_output_uppercase_no_epsigexe(self): 
         inputstr = '92971beb3f6d486bdb86402e8e9e2c726d1173d7999f3f7188f3884663181ff0'
@@ -243,9 +242,7 @@ class test_epsig2_functions(epsig2GUI_TestClient):
 
     # def test_insert_spaces(self): 
     #     input_str = '1234567890abcdefghijklmnopqrstuvwxyz1234'
-
     #     output_str = epsig2.insert_spaces(self, input_str, s_range=8)
-
     #     self.assertEqual(output_str, '12345678 90abcdef ghijklmn opqrstuv wxyz1234')
 
     def test_checkCacheFilenameSeedAlg_BNK(self): 
@@ -306,7 +303,7 @@ class test_epsig2_functions(epsig2GUI_TestClient):
                     self.assertEqual(hash_value, '6a29e257f317bc9cdbe07d92b576298329354d70')
 
 
-    def test_epsigexe_vs_epsig2py(self): 
+    def test_epsig2py_BIN(self): 
         self.seed = '0000000000000000000000000000000000000000'
         self.bnkfile = 'G:/OLGR-TECHSERV/BINIMAGE/VID/A78B1_05L_CSD_50D_5B.bin'
         self.mandir = os.path.dirname(self.bnkfile)
@@ -320,13 +317,10 @@ class test_epsig2_functions(epsig2GUI_TestClient):
         self.options_d['selectedHashtype'] = self.selectedHashtype 
         self.options_d['use_epsigexe'] = False        
 
-        epsig2py_result = epsig2.dobin(self, self.bnkfile)
-        # output_str_epsig2py = epsig2.format_output(self, epsig2py_result, self.options_d)
+        my_p = epsig2(self.seed, self.bnkfile, self.options_d, self.cache_dict, self.selectedHashtype) 
+        my_p.processfile()
+        
+        localhash = my_p.xor_result
+        output_str = epsig2.format_output(self, localhash, self.options_d)
 
-        self.options_d['use_epsigexe'] = True        
-        epsigexe_result = epsig2_gui.epsigexe_start2(self, self.bnkfile, self.seed)
-        # output_str_epsigexe = epsig2.format_output(self, epsigexe_result, self.options_d)
-
-        print(epsig2py_result, epsigexe_result)
-
-        # self.assertEqual(output_str_epsig2py, output_str_epsigexe)
+        self.assertEqual('ECBAF848', output_str)

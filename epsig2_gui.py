@@ -464,7 +464,7 @@ class epsig2_gui(threading.Thread):
 
         # headers
         self.text_BNKoutput.insert(END, "\nProcessing: " + filepath + "\n")            
-        self.text_BNKoutput.insert(END, ''.join([char*100 for char in '-']) + "\n") 
+        self.text_BNKoutput.insert(END, ''.join([char*60 for char in '-']) + "\n") 
 
         cachedhit = self.check_cache_filename(filepath, self.seed.seed)        
         
