@@ -9,6 +9,7 @@ from epsig2 import epsig2
 
 
 BNK_FILE_REMOTE = 'G:/OLGR-TECHSERV/BINIMAGE/KONAMI/1645GDXX_393_004.BNK'
+BNK_FILE_REMOTE2 = 'G:/OLGR-TECHSERV/BINIMAGE/Wymac/G0351_004_301103.BNK'
 BNK_FILE_LOCAL = 'bnkfiles/5D81F_W4QLQ05M.BNK'
 BIN_FILE_LOCAL = 'bnkfiles/A35E4_35I_CSC_Q0A_QB.BIN'
 BNK_FILE_LOCAL_BAD = 'bnkfiles/5D81F_W4QLQ05M_2.BNK' # missing 'p'
@@ -190,3 +191,21 @@ class test_epsig2gui_functions(epsig2GUI_TestClient):
 
         epsigexe_output = epsig2_gui.epsigexe_start2(self, self.bnkfile, self.seed)
         self.assertFalse(epsigexe_output['returncode'], epsigexe_output['returncode'])        
+
+    @unittest.skipIf(os.path.isfile(BNK_FILE_REMOTE2) == False, "file not found")
+    def test_epsigexe_start_BNK_Starting_Zero_result(self): 
+        self.bnkfile = BNK_FILE_REMOTE2 # G0351_004_301103
+        self.seed = '0000000000000000000000000000000000000000'
+        self.mandir = os.path.dirname(self.bnkfile)
+        self.options_d['cache_file_f'] = True 
+        self.LogOutput = list() 
+        self.selectedHashtype = 'HMAC-SHA1'    
+        self.options_d['selectedHashtype'] = self.selectedHashtype   
+        self.options_d['use_epsigexe'] = True
+
+        self.seed = Seed('0000000000000000000000000000000000000000', self.selectedHashtype).seed
+
+        epsigexe_output = epsig2_gui.epsigexe_start2(self, self.bnkfile, self.seed)
+        
+        self.assertTrue(epsigexe_output['returncode'], epsigexe_output['returncode'])
+        self.assertEqual(epsigexe_output['hash_result'], '0B7C877F2F6D71D52143E440C4F1AD11B7279DE8000000000000000000000000' )
