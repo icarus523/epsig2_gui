@@ -564,11 +564,8 @@ class epsig2():
     def format_output(self, inputstr, options_d):
         outputstr = inputstr
 
-        if options_d['use_epsigexe'] == False: 
-            if options_d['selectedHashtype'] == 'HMAC-SHA1': 
-                outputstr = inputstr.lstrip('0X').lstrip('0x') #strip 0x first
-            elif options_d['selectedHashtype'] == 'HMAC-SHA256': 
-                outputstr = inputstr.lstrip('0X').lstrip('0x') #strip 0x first
+        #if options_d['use_epsigexe'] == False: 
+        outputstr = inputstr.lstrip('0X').lstrip('0x') #strip 0x first
         
         if options_d['selectedHashtype'] == 'HMAC-SHA1': 
             outputstr = outputstr.zfill(40)

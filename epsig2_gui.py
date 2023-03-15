@@ -69,6 +69,8 @@
 # v2.2.1 - Added fix for displaying results when hashing .BIN files when the option to use epsig.exe is selected
 #       - Added a message in the log, that using epsig.exe to hash .BIN files is not supported, and that epsig2.py will be used instead.
 # v2.2.2 - Added fix for displaying results when utilising epsig.exe, that espig2.format_output won't lstrip 0x or 0X, but still zfill(40) or zfill(64)
+# v2.2.3 - Added fix for lstrip 0x or 0X for all results. 
+#        - Added additional test functions for epsig2 py functions, separated epsigexe functions. 
 import os
 import sys
 import csv
@@ -550,7 +552,9 @@ class epsig2_gui(threading.Thread):
                 # BIN file, use epsig2 (i.e. python shasums)
                 # Note: epsigexe doesn't support BIN files
                 if self.use_epsigexe.get() == 1: 
-                    logging.info("epsig.exe doesn't support .BIN files, w/seed. Continuing using epsig2.py")
+                    msg = "epsig.exe doesn't support .BIN files, w/seed. Continuing using epsig2.py"
+                    self.text_BNKoutput.insert(END, "*** Warning " + msg + "\n")
+                    logging.warning(msg)
 
                 my_p = epsig2(self.seed.seed, filepath, self.gui_get_options(), self.cache_dict, str(self.selectedHashtype.get())) 
                 my_p.processfile()
