@@ -15,8 +15,25 @@ class test_epsig2_functions(epsig2GUI_TestClient):
 # stderr=b'')
 # [Finished in 250.6s]
 
-    def test_format_output_epsigexe_2(self): 
-        inputstr = '0B7C877F2F6D71D52143E440C4F1AD11B7279DE8000000000000000000000000'
+    # epsig2.format_output properly handles strings that start with a zero. 
+    def test_format_output_epsig2_starting_0(self): 
+        inputstr = '0b7c877f2f6d71d52143e440c4f1ad11b7279de8000000000000000000000000'
+
+        self.options_d['cache_file_f'] = False
+        self.options_d['uppercase'] = True
+        self.options_d['eightchar'] = False
+        self.options_d['reverse'] = False
+        self.options_d['usr_cache_file'] = False
+        self.selectedHashtype = 'HMAC-SHA1'
+        self.options_d['selectedHashtype'] = self.selectedHashtype 
+        self.options_d['use_epsigexe'] = True        
+
+        output_str = epsig2.format_output(self, inputstr, self.options_d)
+        self.assertEqual(output_str, '0B7C877F2F6D71D52143E440C4F1AD11B7279DE8000000000000000000000000')
+    
+    # epsig2.format_output properly handles strings that start with a 0x. 
+    def test_format_output_epsig2_starting_0x(self): 
+        inputstr = '0x0b7c877f2f6d71d52143e440c4f1ad11b7279de8000000000000000000000000'
 
         self.options_d['cache_file_f'] = False
         self.options_d['uppercase'] = True
@@ -30,6 +47,21 @@ class test_epsig2_functions(epsig2GUI_TestClient):
         output_str = epsig2.format_output(self, inputstr, self.options_d)
         self.assertEqual(output_str, '0B7C877F2F6D71D52143E440C4F1AD11B7279DE8000000000000000000000000')
 
+    # epsig2.format_output properly handles strings that start with a 0X. 
+    def test_format_output_epsig2_starting_0X(self): 
+        inputstr = '0X0B7C877F2F6D71D52143E440C4F1AD11B7279DE8000000000000000000000000'
+
+        self.options_d['cache_file_f'] = False
+        self.options_d['uppercase'] = True
+        self.options_d['eightchar'] = False
+        self.options_d['reverse'] = False
+        self.options_d['usr_cache_file'] = False
+        self.selectedHashtype = 'HMAC-SHA1'
+        self.options_d['selectedHashtype'] = self.selectedHashtype 
+        self.options_d['use_epsigexe'] = True        
+
+        output_str = epsig2.format_output(self, inputstr, self.options_d)
+        self.assertEqual(output_str, '0B7C877F2F6D71D52143E440C4F1AD11B7279DE8000000000000000000000000')
 
     def test_epsigexe_dobnk(self): 
         expected_result = 'FC1FE2617F2B5EF0C0652FB8D1345738782E6468000000000000000000000000'

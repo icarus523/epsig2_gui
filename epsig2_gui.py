@@ -69,7 +69,7 @@
 # v2.2.1 - Added fix for displaying results when hashing .BIN files when the option to use epsig.exe is selected
 #       - Added a message in the log, that using epsig.exe to hash .BIN files is not supported, and that epsig2.py will be used instead.
 # v2.2.2 - Added fix for displaying results when utilising epsig.exe, that espig2.format_output won't lstrip 0x or 0X, but still zfill(40) or zfill(64)
-# v2.2.3 - Added fix for lstrip 0x or 0X for all results. 
+# v2.2.3 - Added fix for lstrip 0x or 0X for all results, using string slices instead. lstrip=bad
 #        - Added additional test functions for epsig2 py functions, separated epsigexe functions. 
 import os
 import sys
@@ -106,7 +106,7 @@ from queue import Queue, Empty
 
 from epsig2 import epsig2, CacheFile, BNKEntry, Seed, DEFAULT_CACHE_FILE
 
-VERSION = "2.2.2"
+VERSION = "2.2.3"
 
 EPSIG_LOGFILE = "epsig2.log"
 MAXIMUM_BLOCKSIZE_TO_READ = 65535
@@ -276,6 +276,8 @@ class epsig2_gui(threading.Thread):
                 output_l.append(s) 
                 if s.endswith("(LSB First i.e. HMAC-SHA1)"): 
                     complete = True
+                    proc.terminate()
+                    proc.wait()
                 # handle all epsig.exe fails. 
                 if 'Critical' in s: 
                     complete = True 

@@ -16,7 +16,7 @@ from concurrent.futures import ThreadPoolExecutor, wait, as_completed
 
 p_reset = "\x08"*8
 
-TEST=True   # This must be changed once released
+TEST=False   # This must be changed once released
 
 if TEST: 
     DEFAULT_CACHE_FILE="epsig2_cachefile_v4.json"
@@ -565,8 +565,10 @@ class epsig2():
         outputstr = inputstr
 
         #if options_d['use_epsigexe'] == False: 
-        outputstr = inputstr.lstrip('0X').lstrip('0x') #strip 0x first
-        
+        #outputstr = inputstr.lstrip('0X').lstrip('0x') #strip 0x first
+        if inputstr.startswith('0x') or inputstr.startswith('0X'): 
+            outputstr = inputstr[2:] # deletes the first two chars in a string
+
         if options_d['selectedHashtype'] == 'HMAC-SHA1': 
             outputstr = outputstr.zfill(40)
         elif options_d['selectedHashtype'] == 'HMAC-SHA256': 
